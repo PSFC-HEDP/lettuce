@@ -1,0 +1,9 @@
+# output files
+run_outputs.csv
+runs.log
+
+# data files
+data/*
+
+# IntelliJ IDEA files
+.idea/*
