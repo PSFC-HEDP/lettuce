@@ -18,7 +18,7 @@ but I'm just not about that life, you know?
   Templates used to write the batch scripts for each simulation
 - `pulse_shapes/`  
   Pulse shape files downloaded from OmegaOps
-- `python/`
+- `python/`  
   Python scripts that get called by the bash scripts in the root directory
 - `run_inputs.csv`  
   Table in which the user specifies the parameters for every simulation
@@ -43,4 +43,33 @@ but I'm just not about that life, you know?
 
 ## Recommended workflow
 
+The first 
+
 It will warn you if the simulation appears to be exactly the same as one that has already been run.
+
+## Run inputs
+
+Runs are defined in run_inputs.csv.
+Each row contains a unique name for the run followed by all the information needed to run the simulation.
+The columns are as follows:
+
+- **laser energy**  
+   The total time-integrated energy incident on the capsule, in kilojoules.
+- **pulse shape**  
+   The name of the laser pulse shape.  The 1 ns square pulse is "SG10v001".  If you're not sure what the name of your pulse shape is, consult the [OMEGA pulse shape library](https://omegaops.lle.rochester.edu/cgi-script/pulseShapes).
+- **outer diameter**  
+  The size of the capsule, in micrometers.
+- **shell material**  
+  The name of the shell material.  Many materials have multiple acceptable names (for example, "SiO2" and "glass" both do the same thing).
+- **shell thickness**  
+  The thickness of the shell, in micrometers.
+- **aluminum thickness**  
+  The thickness of the aluminum coating on the outside of the shell, in micrometers (usually 0.1).
+- **fill**  
+  A string that specifies the density and composition of the gas fill.  It should look something like this: "12atm 3He + 6atm D".  Each component is given as a molecular pressure at 293K followed by the name of the element.  Note that these are molecular pressures.  "D" and "D2" are interchangeable.
+- **absorption fraction**  
+  The ratio between the laser energy absorbed by the capsule and the total laser energy.
+- **flux limiter**  
+  The free-streaming electron sharp-cutoff flux limiter coefficient.  Units unknown.  Setting it to 0 will use Valeri Goncharov's nonlocal model instead.
+- **laser degradation**  
+  If this is nonzero, the laser pulse will be cut short by this many picoseconds.  This is primarily used for matching simulated yields to experimental ones.

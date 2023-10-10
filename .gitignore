@@ -5,5 +5,8 @@ runs.log
 # data files
 runs/*
 
+# compiled python
+*.pyc
+
 # IntelliJ IDEA files
 .idea/*

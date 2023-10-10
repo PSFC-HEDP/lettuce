@@ -1,0 +1,8 @@
+name,laser energy,pulse shape,outer diameter,shell material,shell thickness,aluminum thickness,fill,absorption fraction,flux limiter,laser degradation
+104770,25.8,SG10v001,867.2,CD,14.5,0.1,1.5atm D + 1.5atm T,.50,.08,200
+104782,15.7,SG06v001,865.4,CD,6.6,0.1,1.5atm D + 1.5atm T,.50,.08,0
+73231,14.6307,SG06v001,870.0,glass,0.0,3.5,12.02atm 3He + 5.93atm D2 + 0.12atm Ar,.49,,
+73234,14.4978,SG10v001,862.4,glass,0.0,3.2,12.39atm 3He + 5.94atm D2 + 0.23atm Ar,.62,,
+73236,25.8345,SG10v001,876.2,glass,0.0,3.6,12.02atm 3He + 5.93atm D2 + 0.12atm Ar,.64,,
+73239,26.0791,SG10v001,873.6,glass,0.0,3.3,12.02atm 3He + 5.93atm D2 + 0.12atm Ar,.63,,
+73241,25.9560,SG10v001,875.0,glass,0.0,3.5,12.02atm 3He + 5.93atm D2 + 0.12atm Ar,.64,,
