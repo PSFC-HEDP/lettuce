@@ -1,5 +1,7 @@
 # Lettuce
 
+[![continuous integration](https://github.com/PSFC-HEDP/lettuce/actions/workflows/main.yml/badge.svg)](https://github.com/PSFC-HEDP/lettuce/actions/workflows/main.yml)
+
 This is a suite of Bash and Python scripts for running LILAC and IRIS from the command line.
 
 The name is a play on Varchas Gopalaswamy's Lotus
