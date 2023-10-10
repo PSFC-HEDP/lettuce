@@ -1,4 +1,4 @@
-name: continuous integration
+name: Unit tests
 on: push
 jobs:
   test:
