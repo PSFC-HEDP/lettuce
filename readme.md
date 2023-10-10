@@ -12,10 +12,12 @@ but I'm just not about that life, you know?
 
 ## File structure
 
-- `data/`  
+- `runs/`  
   All of the simulation inputs and outputs, organized into subfolders by shot and code
-- `template/`  
+- `templates/`  
   Templates used to write the batch scripts for each simulation
+- `pulse_shapes/`  
+  Pulse shape files downloaded from OmegaOps
 - `python/`
   Python scripts that get called by the bash scripts in the root directory
 - `run_inputs.csv`  

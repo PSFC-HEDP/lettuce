@@ -3,7 +3,7 @@ run_outputs.csv
 runs.log
 
 # data files
-data/*
+runs/*
 
 # IntelliJ IDEA files
 .idea/*
