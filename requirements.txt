@@ -1,0 +1,5 @@
+numpy
+periodictable
+matplotlib
+pandas
+pytest

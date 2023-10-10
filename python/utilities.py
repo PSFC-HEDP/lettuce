@@ -5,9 +5,8 @@ import re
 from typing import Optional
 
 import numpy as np
-import pandas as pd
 import periodictable as periodictable
-
+from numpy.typing import NDArray
 
 D_3He_MIXTURES = {
 	103: 1.00000, 289: 0.99000, 278: 0.92308, 292: 0.90000,
@@ -19,7 +18,7 @@ D_3He_MIXTURES = {
 }
 
 
-def load_pulse_shape(pulse_shape_name, total_energy):
+def load_pulse_shape(pulse_shape_name, total_energy) -> tuple[NDArray[float], NDArray[float]]:
 	""" load a pulse shape from disk """
 	try:
 		with open(f"pulse_shapes/{pulse_shape_name}.json", "r") as file:
@@ -27,9 +26,13 @@ def load_pulse_shape(pulse_shape_name, total_energy):
 	except IOError:
 		raise ValueError(F"")
 	if len(data) != 1:
-		raise ValueError(f"the file 'pulse_shapes/{pulse_shape_name}.json' seems to contain multiple pulse shapes.  please, when you download pulse shapes from OmegaOps, make sure you only have one pule shape activated each time you download a file.")
+		raise ValueError(f"the file 'pulse_shapes/{pulse_shape_name}.json' seems to contain multiple pulse shapes.  "
+		                 f"please, when you download pulse shapes from OmegaOps, make sure you only have one pule "
+		                 f"shape activated each time you download a file.")
 	if data[0]["Pulse"] != pulse_shape_name:
-		raise ValueError(f"the file 'pulse_shapes/{pulse_shape_name}.json' seems to contain the information for pulse shape {data[0]['Pulse']} instead of {pulse_shape_name}.  Please rename it accordingly and download the true pulse shape file for {pulse_shape_name} from OmegaOps.")
+		raise ValueError(f"the file 'pulse_shapes/{pulse_shape_name}.json' seems to contain the information for pulse "
+		                 f"shape {data[0]['Pulse']} instead of {pulse_shape_name}.  Please rename it accordingly and "
+		                 f"download the true pulse shape file for {pulse_shape_name} from OmegaOps.")
 	time = np.empty(len(data[0]["UV"]["data"]))
 	power = np.empty(len(data[0]["UV"]["data"]))
 	for i in range(len(data[0]["UV"]["data"])):
@@ -40,11 +43,17 @@ def load_pulse_shape(pulse_shape_name, total_energy):
 	return time, power
 
 
-def find_best_d3he_material_code(fHe):
-	for matcode in D_3He_MIXTURES:
-		if D_3He_MIXTURES[matcode] <= fHe + 1e-3:
-			return matcode
-	return ValueError(f"something's wrong with the 3He fill fraction {fHe:.0%}")
+def find_best_D3He_material_code(fHe: float) -> tuple[int, float]:
+	""" find the LILAC material code that represents the mixture of D and 3He that most accurately
+	    represents the specified fill ratio.  specifically, find the LILAC material with the nearest
+	    atomic 3He fraction that is less than or equal to the given one.
+	    :return: the selected material code and the atomic 3He fraction that corresponds to it
+	"""
+	if 0 <= fHe <= 1:
+		for matcode in D_3He_MIXTURES:
+			if D_3He_MIXTURES[matcode] <= fHe + 1e-3:
+				return matcode, D_3He_MIXTURES[matcode]
+	raise ValueError(f"something's wrong with the 3He fill fraction {fHe:.0%}")
 
 
 def get_shell_material_from_name(name: str) -> Material:
@@ -110,9 +119,9 @@ def get_gas_material_from_components(partial_pressures: dict[str, float]) -> Mat
 			tritium_fraction=atomic_fractions.get("T", 0),
 			pressure=total_pressure)
 	# if this is a mixture of hydrogen and helium-3
-	elif all(nuclide in ["H", "D", "T", "He3"] for nuclide in nuclides):
+	elif all(nuclide in ["H", "D", "T", "3He"] for nuclide in nuclides):
 		# we can use a bilt-in gas iff there's a matcode that exactly matches the desired ratio
-		best_material_code, found_atomic_fraction = find_best_d3he_material_code(atomic_fractions["He3"])
+		best_material_code, found_atomic_fraction = find_best_D3He_material_code(atomic_fractions["3He"])
 		if abs(found_atomic_fraction - atomic_fractions["3He"]) < 1e-2:
 			return Material(best_material_code,
 			                protium_fraction=atomic_fractions.get("H", 0),
@@ -127,7 +136,7 @@ def get_gas_material_from_components(partial_pressures: dict[str, float]) -> Mat
 			                pressure=total_pressure)
 
 	else:
-		raise NotImplementedError("I don't autodetect materials by species unless it's a simple gas mix.  please specify the name or code. for custom gas mixen, use code -999.")
+		raise NotImplementedError("I don't autodetect materials by species unless it's a simple gas mix.")
 
 
 def parse_gas_components(descriptor: str) -> dict[str, float]:
@@ -176,3 +185,10 @@ class Material:
 		return f"Material({self.material_code}, protium_fraction={self.protium_fraction}, " \
 		       f"tritium_fraction={self.tritium_fraction}, density={self.density}, " \
 		       f"pressure={self.pressure})"
+
+	def __eq__(self, other: Material):
+		return self.material_code == other.material_code and \
+		       self.protium_fraction == other.protium_fraction and \
+		       self.tritium_fraction == other.tritium_fraction and \
+		       self.density == other.density and \
+		       self.pressure == other.pressure
