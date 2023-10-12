@@ -2,11 +2,28 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import datetime
 from typing import Optional
 
 import numpy as np
 import periodictable as periodictable
 from numpy.typing import NDArray
+from pandas import read_csv, DataFrame, Series
+
+INPUT_DTYPES = {
+	"name": str,
+	"laser energy": float, "pulse shape": str, "beam profile": str,
+	"outer diameter": float, "fill": str,
+	"shell material": str, "shell thickness": float, "aluminum thickness": float,
+	"absorption fraction": float, "flux limiter": float,
+	"laser degradation": float, "density multiplier": float,
+}
+OUTPUT_DTYPES = {
+	"name": str, "code": str,
+	"status": str, "status changed": str, "slurm ID": str,
+	"yield": float, "bang-time": float, "convergence ratio": float, "ρR": float,
+	"ion temperature": float, "electron temperature": float,
+}
 
 D_3He_MIXTURES = {
 	103: 1.00000, 289: 0.99000, 278: 0.92308, 292: 0.90000,
@@ -18,21 +35,55 @@ D_3He_MIXTURES = {
 }
 
 
-def load_pulse_shape(pulse_shape_name, total_energy) -> tuple[NDArray[float], NDArray[float]]:
-	""" load a pulse shape from disk """
+def load_inputs_table() -> DataFrame:
+	""" load the table containing the specifications for all of the runs """
+	return read_csv(
+		"run_inputs.csv", skipinitialspace=True, index_col="name", dtype=INPUT_DTYPES)
+
+
+def load_outputs_table() -> DataFrame:
+	""" load the table into which we will dump all of the run outputs """
 	try:
-		with open(f"pulse_shapes/{pulse_shape_name}.json", "r") as file:
+		return read_csv(
+			"run_outputs.csv", skipinitialspace=True, index_col=["name", "code"],
+			dtype=OUTPUT_DTYPES, parse_dates=["status changed"])
+	except IOError:
+		table = DataFrame({key: Series(dtype=dtype) for key, dtype in OUTPUT_DTYPES.items()})
+		table.set_index(["name", "code"], inplace=True)
+		return table
+
+
+def log_message(message: str) -> None:
+	""" write a timestamped message to the runs log file, and also stdout """
+	with open("runs.log", "a") as file:
+		file.write(datetime.today().strftime('%m-%d %H:%M') + " | " + message + "\n")
+	print(message)
+
+
+def submit_slurm_job(script: str) -> str:
+	""" submit a bash script to slurm using sbatch, and return the resulting job's ID number """
+	return "420"
+
+
+def load_pulse_shape(pulse_shape_name: str, total_energy: float) -> tuple[NDArray[float], NDArray[float]]:
+	""" load a pulse shape from disk
+	    :return: the time (ns) and total laser power (TW)
+	"""
+	filepath = f"resources/pulse_shapes/{pulse_shape_name}.json"
+	try:
+		with open(filepath, "r") as file:
 			data = json.load(file)
 	except IOError:
-		raise ValueError(F"")
+		raise IOError(f"the pulse shape file '{filepath}' is missing.  please "
+		              f"download it from the OmegaOps pulse shape library.")
 	if len(data) != 1:
-		raise ValueError(f"the file 'pulse_shapes/{pulse_shape_name}.json' seems to contain multiple pulse shapes.  "
-		                 f"please, when you download pulse shapes from OmegaOps, make sure you only have one pule "
-		                 f"shape activated each time you download a file.")
+		raise ValueError(f"the file '{filepath}' seems to contain multiple pulse "
+		                 f"shapes.  please, when you download pulse shapes from OmegaOps, make sure you only have one "
+		                 f"pusle shape activated each time you download a file.")
 	if data[0]["Pulse"] != pulse_shape_name:
-		raise ValueError(f"the file 'pulse_shapes/{pulse_shape_name}.json' seems to contain the information for pulse "
-		                 f"shape {data[0]['Pulse']} instead of {pulse_shape_name}.  Please rename it accordingly and "
-		                 f"download the true pulse shape file for {pulse_shape_name} from OmegaOps.")
+		raise ValueError(f"the file '{filepath}' seems to contain the information "
+		                 f"for pulse shape {data[0]['Pulse']} instead of {pulse_shape_name}.  Please rename it "
+		                 f"accordingly and download the true pulse shape file for {pulse_shape_name} from OmegaOps.")
 	time = np.empty(len(data[0]["UV"]["data"]))
 	power = np.empty(len(data[0]["UV"]["data"]))
 	for i in range(len(data[0]["UV"]["data"])):
@@ -41,6 +92,21 @@ def load_pulse_shape(pulse_shape_name, total_energy) -> tuple[NDArray[float], ND
 	raw_total = np.sum(power*np.gradient(time))
 	power = power*total_energy/raw_total
 	return time, power
+
+
+def load_beam_profile(beam_profile_name: str) -> tuple[NDArray[float], NDArray[float]]:
+	""" load a beam profile from disk
+	    :return: the radial coordinate (μm) and laser beam intensity (normalized)
+	"""
+	filepath = f"resources/beam_profiles/{beam_profile_name.replace(' ', '_')}.txt"
+	try:
+		data = np.loadtxt(filepath)
+	except IOError:
+		raise IOError(f"the beam profile file '{filepath}' is missing.  please ask Varchas for appropriate data.")
+	if data.shape[1] != 2 or data[-1, 0] != -1 or data[-1, 1] != 0:
+		raise ValueError(f"the file '{filepath}' seems wrong.  it should be a two-column whitespace-separated value "
+		                 f"file with '-1 0' for the last row.")
+	return data[:, 0], data[:, 1]
 
 
 def find_best_D3He_material_code(fHe: float) -> tuple[int, float]:
@@ -114,25 +180,25 @@ def get_gas_material_from_components(partial_pressures: dict[str, float]) -> Mat
 	# if this is just a mixture of hydrogen isotopes
 	if all(nuclide in ["H", "D", "T"] for nuclide in nuclides):
 		# we can use bilt-in gas #101 and control ratios using ptrit
-		return Material(
-			101, protium_fraction=atomic_fractions.get("H", 0),
-			tritium_fraction=atomic_fractions.get("T", 0),
-			pressure=total_pressure)
+		return Material(101,
+		                protium_fraction=atomic_fractions.get("H", 0.),
+		                tritium_fraction=atomic_fractions.get("T", 0.),
+		                pressure=total_pressure)
 	# if this is a mixture of hydrogen and helium-3
 	elif all(nuclide in ["H", "D", "T", "3He"] for nuclide in nuclides):
 		# we can use a bilt-in gas iff there's a matcode that exactly matches the desired ratio
 		best_material_code, found_atomic_fraction = find_best_D3He_material_code(atomic_fractions["3He"])
 		if abs(found_atomic_fraction - atomic_fractions["3He"]) < 1e-2:
 			return Material(best_material_code,
-			                protium_fraction=atomic_fractions.get("H", 0),
-			                tritium_fraction=atomic_fractions.get("T", 0),
+			                protium_fraction=atomic_fractions.get("H", 0.),
+			                tritium_fraction=atomic_fractions.get("T", 0.),
 			                pressure=total_pressure)
 		else:
 			# otherwise, we will need to specify this material manually using `mater`
 			print("warning: I don't think this method of specifying the fill fraction, like, actually works...")
 			return Material(-best_material_code,
-			                protium_fraction=atomic_fractions.get("H", 0),
-			                tritium_fraction=atomic_fractions.get("T", 0),
+			                protium_fraction=atomic_fractions.get("H", 0.),
+			                tritium_fraction=atomic_fractions.get("T", 0.),
 			                pressure=total_pressure)
 
 	else:
