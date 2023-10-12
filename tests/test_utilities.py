@@ -4,7 +4,25 @@ import pytest
 from numpy import nan
 
 from python.utilities import load_pulse_shape, find_best_D3He_material_code, get_shell_material_from_name, Material, \
-	get_gas_material_from_components, parse_gas_components
+	get_gas_material_from_components, parse_gas_components, load_inputs_table, load_outputs_table, log_message
+
+
+def test_load_inputs_table():
+	inputs_table = load_inputs_table()
+	assert inputs_table["flux limiter"].dtype == float
+
+
+def test_load_outputs_table():
+	outputs_table = load_outputs_table()
+	assert outputs_table["yield"].dtype == float
+
+
+def test_log_message():
+	log_message("testing.")
+
+
+def test_submit_slurm_job():
+	pass
 
 
 def test_load_pulse_shape():
