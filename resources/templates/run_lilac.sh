@@ -16,7 +16,7 @@ module load lilac
 cd "<<directory>>" || exit 1
 
 # run LILAC
-lilac deck.txt  # passing "deck.txt" makes it read "./input_deck.txt"
+lilac
 exit_code=$?
 
 # figure out if the run was successful, and if not, why not
@@ -42,14 +42,12 @@ echo "$(date +'%m-%d %H:%M') | ${exit_string}" >> ../../../runs.log
 # Move files out of the "out" directory
 if [ $exit_code -eq 0 ]; then
 	if [ -e out/fort.13 ]; then
-		mv out/fort.13 output.lpf
+		mv "out/fort.13" "output.lpf"
 	fi
 	if [ -e out/lilac.hdf5 ]; then
-		mv out/lilac.hdf5 output.h5
+		mv "out/lilac.hdf5" "output.h5"
 	fi
-
-	mv out/lilac_output.txt output.txt
-	mv out/* .
+	mv "out/lilac_output.txt" "output.txt"
 	rm --recursive --force out
 fi
 
