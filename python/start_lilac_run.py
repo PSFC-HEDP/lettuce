@@ -71,7 +71,7 @@ def start_lilac_run(name: str, force: bool) -> None:
 
 	# save all of the inputs and the script to the run directory
 	os.makedirs(f"runs/{name}/lilac", exist_ok=True)
-	with open(f"runs/{name}/lilac/input_deck.txt", "w") as file:
+	with open(f"runs/{name}/lilac/lilac_data_input.txt", "w") as file:
 		file.write(input_deck)
 	with open(f"runs/{name}/lilac/run_lilac.sh", "w") as file:
 		file.write(bash_script)
