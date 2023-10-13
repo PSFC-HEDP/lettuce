@@ -28,11 +28,11 @@ if [ $exit_code -eq 0 ]; then
 		exit_code=0
 		exit_string="LILAC run '<<name>>' exits successfully."
 	else
-		exit_string="LILAC run '<<name>>' quits."
+		exit_string="LILAC run '<<name>>' quits prematurely (see <<directory>>/lilac_$SLURM_JOB_ID.log)."
 		exit_code=3
 	fi
 else
-	exit_string="LILAC run '<<name>>' fails with error_code ${exit_code}."
+	exit_string="LILAC run '<<name>>' fails with error_code ${exit_code} (see <<directory>>/lilac_$SLURM_JOB_ID.log)."
 fi
 
 # log the result to the slurm log and to runs.log
