@@ -2,15 +2,15 @@ import os
 import shutil
 from argparse import ArgumentParser
 from datetime import datetime
-from re import sub, DOTALL
-from subprocess import call
+from re import search
+from subprocess import run
 
 import numpy as np
 from pandas import Series, Timestamp, concat
 
 from python.utilities import load_pulse_shape, get_shell_material_from_name, get_gas_material_from_components, \
 	parse_gas_components, load_beam_profile, Material, load_inputs_table, load_outputs_table, log_message, \
-	submit_slurm_job, fill_in_template
+	fill_in_template
 
 
 def start_lilac_run(name: str, force: bool) -> None:
@@ -37,7 +37,7 @@ def start_lilac_run(name: str, force: bool) -> None:
 	# if it's already running and the user did force it, cancel the run
 	elif current_status == "pending" or current_status == "running":
 		print(f"cancelling the current run...")
-		call(["scancel", outputs_table.loc[(name, "LILAC"), "slurm ID"]])
+		run(["scancel", outputs_table.loc[(name, "LILAC"), "slurm ID"]])
 	# if it's already run and the user did force it, clear the previous output
 	elif current_status == "completed":
 		print(f"overwriting the previous run...")
@@ -81,7 +81,9 @@ def start_lilac_run(name: str, force: bool) -> None:
 	           np.stack([beam_radius, beam_intensity], axis=1), delimiter=" ")
 
 	# finally, submit the slurm job
-	slurm_ID = submit_slurm_job("run_lilac.sh")
+	submission = run(["sbatch", f"runs/{name}/lilac/run_lilac.sh"],
+	                 check=True, capture_output=True, text=True)
+	slurm_ID = search(r"batch job ([0-9]+)", submission.stdout).group(1)
 
 	# update our records
 	if (name, "LILAC") not in outputs_table.index:

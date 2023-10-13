@@ -22,10 +22,6 @@ def test_log_message():
 	log_message("testing.")
 
 
-def test_submit_slurm_job():
-	pass
-
-
 def test_fill_in_template():
 	expected_output = "krabs is a nice person\n"
 	actual_output = fill_in_template(

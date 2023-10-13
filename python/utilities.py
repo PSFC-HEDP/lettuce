@@ -60,11 +60,6 @@ def log_message(message: str) -> None:
 	print(message)
 
 
-def submit_slurm_job(script: str) -> str:
-	""" submit a bash script to slurm using sbatch, and return the resulting job's ID number """
-	return "420"
-
-
 def fill_in_template(template_filename: str, parameters: dict[str, str], flags: Optional[dict[str, bool]] = None) -> str:
 	""" load a template from resources/templates and replace all of the angle-bracket-marked
 	    parameter names with actual user-specified parameters
@@ -99,7 +94,6 @@ def fill_in_template(template_filename: str, parameters: dict[str, str], flags: 
 		               f"the value of {remaining_blank.group()}")
 
 	return content
-
 
 
 def load_pulse_shape(pulse_shape_name: str, total_energy: float) -> tuple[NDArray[float], NDArray[float]]:
