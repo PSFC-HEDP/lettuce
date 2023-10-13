@@ -1,3 +1,6 @@
+import os.path
+import shutil
+
 import numpy as np
 import numpy.testing as npt
 import pytest
@@ -9,6 +12,8 @@ from python.utilities import load_pulse_shape, find_best_D3He_material_code, get
 
 
 def test_load_inputs_table():
+	if not os.path.isfile("run_inputs.csv"):
+		shutil.copyfile("tests/run_inputs.csv", "run_inputs.csv")
 	inputs_table = load_inputs_table()
 	assert inputs_table["flux limiter"].dtype == float
 
