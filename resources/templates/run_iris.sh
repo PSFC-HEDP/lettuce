@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=iris_<<name>>
+#SBATCH --job-name=IRIS
 #SBATCH --time=20:00:00
 #SBATCH --partition=blizzard
 #SBATCH --ntasks=16
