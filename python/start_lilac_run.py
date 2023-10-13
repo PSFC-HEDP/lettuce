@@ -8,7 +8,7 @@ from subprocess import run
 import numpy as np
 from pandas import Series, Timestamp, concat
 
-from python.utilities import load_pulse_shape, get_shell_material_from_name, get_gas_material_from_components, \
+from utilities import load_pulse_shape, get_shell_material_from_name, get_gas_material_from_components, \
 	parse_gas_components, load_beam_profile, Material, load_inputs_table, load_outputs_table, log_message, \
 	fill_in_template
 

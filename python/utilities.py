@@ -6,7 +6,6 @@ from re import fullmatch, sub, DOTALL, search
 from typing import Optional
 
 import numpy as np
-import periodictable as periodictable
 from numpy.typing import NDArray
 from pandas import read_csv, DataFrame, Series
 
@@ -25,7 +24,15 @@ OUTPUT_DTYPES = {
 	"ion temperature": float, "electron temperature": float,
 }
 
-D_3He_MIXTURES = {
+
+LILAC_MATERIAL_CODES = {
+	"H": 1, "He": 2, "Li": 3, "Be": 4, "C": 6, "diamond": 6, "HDC": 6,
+	"Al": 13, "Si": 14, "Fe": 26, "Ge": 32, "Ta": 73, "Au": 79, "U": 92,
+	"CH": 110, "CH2": 111, "strong CD": 113, "CD": 115, "CD2": 116,
+	"SiO2": 150, "glass": 150, "polystyrene": 510,
+}
+
+LILAC_D3He_MIXTURES = {
 	103: 1.00000, 289: 0.99000, 278: 0.92308, 292: 0.90000,
 	280: 0.87500, 298: 0.80000, 291: 0.70000, 297: 0.66667,
 	296: 0.60000, 295: 0.50000, 270: 0.45000, 283: 0.42857,
@@ -147,9 +154,9 @@ def find_best_D3He_material_code(fHe: float) -> tuple[int, float]:
 	    :return: the selected material code and the atomic 3He fraction that corresponds to it
 	"""
 	if 0 <= fHe <= 1:
-		for matcode in D_3He_MIXTURES:
-			if D_3He_MIXTURES[matcode] <= fHe + 1e-3:
-				return matcode, D_3He_MIXTURES[matcode]
+		for matcode in LILAC_D3He_MIXTURES:
+			if LILAC_D3He_MIXTURES[matcode] <= fHe + 1e-3:
+				return matcode, LILAC_D3He_MIXTURES[matcode]
 	raise ValueError(f"something's wrong with the 3He fill fraction {fHe:.0%}")
 
 
@@ -166,24 +173,13 @@ def get_shell_material_from_name(name: str) -> Material:
 		return Material(102, tritium_fraction=1.0)
 	elif name == "DT":
 		return Material(102, tritium_fraction=0.5)
-	elif name == "CH":
-		return Material(110)
-	elif name == "strong CD":
-		return Material(113)
-	elif name == "CD":
-		return Material(115)
-	elif name == "polystyrene":
-		return Material(510)
-	elif name == "SiO2" or name == "glass":
-		return Material(150)
+	elif name in LILAC_MATERIAL_CODES:
+		return Material(LILAC_MATERIAL_CODES[name])
 	else:
 		try:
-			# Symbol is given as carbon, hydrogen, etc.
-			table_entry = periodictable.elements.symbol(name)
+			return Material(int(name))
 		except ValueError:
-			raise IndexError(f"Couldnt find entry for '{name}'")
-		else:
-			return Material(table_entry.number)
+			raise IndexError(f"I don't recognize the material '{name}'")
 
 
 def get_gas_material_from_components(partial_pressures: dict[str, float]) -> Material:
