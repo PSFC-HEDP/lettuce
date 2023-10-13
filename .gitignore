@@ -1,15 +1,15 @@
 # run inputs file
-run_inputs.csv
+/run_inputs.csv
 
 # output files
-run_outputs.csv
-runs.log
+/run_outputs.csv
+/runs.log
 
 # data files
-runs/*
+/runs/*
 
 # compiled python
 *.pyc
 
 # IntelliJ IDEA files
-.idea/*
+/.idea/*
