@@ -43,11 +43,49 @@ but I'm just not about that life, you know?
 
 ## Installation
 
+I actually don't think you need to do anything.  If you're running locally you can
+~~~bash
+pip install -r requirements.txt
+~~~
+if you want, but most of these files require Slurm,
+and if you have Slurm you're presumably on the cluster where all of this is already installed.
+
 ## Recommended workflow
 
-The first 
+The first step is to describe the run you want to do in `run_inputs.csv`.
+See [§ Run inputs](#Run inputs) for more information.
 
+To start the run, call
+~~~bash
+./start_lilac_run.sh [NAME]
+~~~
 It will warn you if the simulation appears to be exactly the same as one that has already been run.
+If you have multiple runs you want to do, call this once for each one and they will be queued in parallel.
+
+While you're waiting, you can see how your runs are doing with
+~~~bash
+./check_on_lilac_runs.sh
+~~~
+This will print out all of the LILAC that is currently queued or running.
+
+Once the LILAC job finishes, it will automatically post-process the result
+and generate a PDF containing numbers of interest in its run directory.
+
+After LILAC is done, you can run IRIS.
+Eventually it would be nice if it automatically ran IRIS after LILAC, but for now it's manual.
+To start an IRIS run, call
+~~~bash
+./start_iris_run.sh [NAME]
+~~~
+
+While you're waiting, you can see how your runs are doing with
+~~~bash
+./check_on_iris_runs.sh
+~~~
+This will print out all of the IRIS that is currently queued or running.
+
+Once the IRIS job finishes, it will automatically post-process the result
+and generate a PDF containing spectra and images in its run directory.
 
 ## Run inputs
 
@@ -59,6 +97,8 @@ The columns are as follows:
    The total time-integrated energy incident on the capsule, in kilojoules.
 - **pulse shape**  
    The name of the laser pulse shape.  The 1 ns square pulse is "SG10v001".  If you're not sure what the name of your pulse shape is, consult the [OMEGA pulse shape library](https://omegaops.lle.rochester.edu/cgi-script/pulseShapes).
+- **beam profile**  
+  The name of the beam profile.  For most people it will be "SG5 SSD".
 - **outer diameter**  
   The size of the capsule, in micrometers.
 - **shell material**  
@@ -72,6 +112,8 @@ The columns are as follows:
 - **absorption fraction**  
   The ratio between the laser energy absorbed by the capsule and the total laser energy.
 - **flux limiter**  
-  The free-streaming electron sharp-cutoff flux limiter coefficient.  Units unknown.  Setting it to 0 will use Valeri Goncharov's nonlocal model instead.
-- **laser degradation**  
-  If this is nonzero, the laser pulse will be cut short by this many picoseconds.  This is primarily used for matching simulated yields to experimental ones.
+  The optional free-streaming electron sharp-cutoff flux limiter coefficient.  Units unknown.  Setting it to 0 will use Valeri Goncharov's nonlocal model instead.
+- **laser degradation** (TODO)  
+  If this is given and nonzero, the laser pulse will be cut short by this many picoseconds.  This is primarily used for matching simulated yields to experimental ones.
+- **density multiplier**  
+  The optional factor by which the shell density should differ from whatever it normally is for that material.  This can be used to match simulated ρRs to experimental ones.
