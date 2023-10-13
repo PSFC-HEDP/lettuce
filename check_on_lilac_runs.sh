@@ -3,4 +3,6 @@
 module purge
 module load slurm/current
 
-squeue --user="$(whoami)" --states="all" --name="LILAC" --Format="JobID:.9,State:.12,Reason:.12,TimeUsed:.9,StartTime:.21,EndTime:.21"
+export SLURM_DATE_FORMAT=relative
+echo "Code  Name   Slurm_ID     State      Reason     Time     Start       End"
+squeue --user="$(whoami)" --states="all" --format="%12j %.8A %.9T %.11r %.8M %.9S %.9e" | grep "LILAC"

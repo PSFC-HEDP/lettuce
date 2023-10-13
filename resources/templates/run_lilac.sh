@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=LILAC
+#SBATCH --job-name=LILAC_<<name>>
 #SBATCH --time=02:00:00
 #SBATCH --partition=blizzard
 #SBATCH --ntasks=1
