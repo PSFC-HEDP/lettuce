@@ -10,7 +10,7 @@ from pandas import Series, Timestamp, concat
 
 from python.utilities import load_pulse_shape, get_shell_material_from_name, get_gas_material_from_components, \
 	parse_gas_components, load_beam_profile, Material, load_inputs_table, load_outputs_table, log_message, \
-	submit_slurm_job
+	submit_slurm_job, fill_in_template
 
 
 def start_lilac_run(name: str, force: bool) -> None:
@@ -40,7 +40,7 @@ def start_lilac_run(name: str, force: bool) -> None:
 		call(["scancel", outputs_table.loc[(name, "LILAC"), "slurm ID"]])
 	# if it's already run and the user did force it, clear the previous output
 	elif current_status == "completed":
-		print(f"overwriting the current run...")
+		print(f"overwriting the previous run...")
 		shutil.rmtree(f"runs/{name}/lilac")
 
 	# get the run inputs from the run input table
@@ -98,55 +98,47 @@ def start_lilac_run(name: str, force: bool) -> None:
 def build_lilac_input_deck(
 		name: str, inputs: Series, fill_material: Material, shell_material: Material) -> str:
 	""" construct the input deck corresponding to the given inputs and return it as a str """
-	with open("resources/templates/lilac_input_deck.txt") as template_file:
-		input_deck = template_file.read()
-
-	# rhydro namelist
-	input_deck = sub("<<name>>", name, input_deck)
-	input_deck = sub("<<absorption fraction>>", f"{inputs['absorption fraction']:.5f}", input_deck)
-	input_deck = sub("<<nonthermal model>>", "none" if inputs["flux limiter"] != 0 else "", input_deck)
-	input_deck = sub("<<flux limiter>>", f"{inputs['flux limiter']:.3f}", input_deck)
-
-	# first prof namelist (fill)
-	input_deck = sub("<<fill material code>>", f"{fill_material.material_code:d}", input_deck)
-	input_deck = sub("<<fill protium fraction>>", f"{fill_material.protium_fraction:.5f}", input_deck)
-	input_deck = sub("<<fill tritium fraction>>", f"{fill_material.tritium_fraction:.5f}", input_deck)
-	input_deck = sub("<<fill pressure>>", f"{fill_material.pressure:.4f}", input_deck)
-	input_deck = sub(
-		"<<fill radius>>", f"{inputs['outer diameter']/2 - inputs['shell thickness']:.3f}", input_deck)
-
-	# second prof namelist (shell)
-	input_deck = sub("<<shell material code>>", f"{shell_material.material_code:d}", input_deck)
-	input_deck = sub("<<shell protium fraction>>", f"{shell_material.protium_fraction:.5f}", input_deck)
-	input_deck = sub("<<shell tritium fraction>>", f"{shell_material.tritium_fraction:.5f}", input_deck)
-	input_deck = sub("<<shell thickness>>", f"{inputs['shell thickness']:.3f}", input_deck)
-	if shell_material.density is not None:
-		input_deck = sub("<<(end)?if density specified>>\n", "", input_deck)
-		input_deck = sub("<<shell density>>", f"{inputs['shell density']:.4f}", input_deck)
-	else:
-		input_deck = sub("<<if density specified>>.*<<endif density specified>>\n", "", input_deck, flags=DOTALL)
-	input_deck = sub("<<shell density multiplier>>", f"{inputs['density multiplier']:.5f}", input_deck)
-
-	# third prof namelist (aluminum)
-	if inputs["aluminum thickness"] > 0:
-		input_deck = sub("<<(end)?if aluminum>>\n", "", input_deck)
-		input_deck = sub("<<aluminum thickness>>", f"{inputs['aluminum thickness']:.3f}", input_deck)
-	else:
-		input_deck = sub("<<if aluminum>>.*<<endif aluminum>>\n", "", input_deck, DOTALL)
-
-	input_deck = sub("<<submitted>>", datetime.today().isoformat(" "), input_deck)
-	return input_deck
+	return fill_in_template(
+		"lilac_input_deck.txt",
+		parameters={
+			# header
+			"submitted": datetime.today().isoformat(" "),
+			# rhydro namelist
+			"name": name,
+			"absorption fraction": f"{inputs['absorption fraction']:.5f}",
+			"nonthermal model": "none" if inputs["flux limiter"] > 0 else "vgon",
+			"flux limiter": f"{inputs['flux limiter']:.3f}",
+			# first prof namelist (fill)
+			"fill material code": f"{fill_material.material_code:d}",
+			"fill protium fraction": f"{fill_material.protium_fraction:.5f}",
+			"fill tritium fraction": f"{fill_material.tritium_fraction:.5f}",
+			"fill pressure": f"{fill_material.pressure:.4f}",
+			"fill radius": f"{inputs['outer diameter']/2 - inputs['shell thickness']:.3f}",
+			# second prof namelist (shell)
+			"shell material code": f"{shell_material.material_code:d}",
+			"shell protium fraction": f"{shell_material.protium_fraction:.5f}",
+			"shell tritium fraction": f"{shell_material.tritium_fraction:.5f}",
+			"shell thickness": f"{inputs['shell thickness']:.3f}",
+			"shell density": f"{shell_material.density:.4f}" if shell_material.density is not None else "None",
+			"shell density multiplier": f"{inputs['density multiplier']:.5f}",
+			# third prof namelist (aluminum)
+			"aluminum thickness": f"{inputs['aluminum thickness']:.3f}",
+		},
+		flags={
+			"density specified": shell_material.density is not None,
+			"aluminum": inputs["aluminum thickness"] > 0,
+		}
+	)
 
 
 def build_lilac_bash_script(name: str) -> str:
 	""" construct the bash script that will run the given lilac and return it as a str """
-	with open("resources/templates/run_lilac.sh") as template_file:
-		bash_script = template_file.read()
-
 	base_directory = os.getcwd().replace('\\', '/')
-	bash_script = sub("<<name>>", name, bash_script)
-	bash_script = sub("<<directory>>", f"{base_directory}/runs/{name}/lilac", bash_script)
-	return bash_script
+	return fill_in_template(
+		"run_lilac.sh", {
+			"name": name,
+			"directory": f"{base_directory}/runs/{name}/lilac"
+		})
 
 
 if __name__ == "__main__":

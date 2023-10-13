@@ -1,0 +1,6 @@
+<<if true>>
+krabs is a <<noun>>
+<<endif true>>
+<<if false>>
+the earth is actually round
+<<endif false>>
