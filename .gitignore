@@ -1,3 +1,6 @@
+# run inputs file
+run_inputs.csv
+
 # output files
 run_outputs.csv
 runs.log
