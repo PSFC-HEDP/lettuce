@@ -16,7 +16,7 @@ module load lilac
 cd "<<directory>>" || exit 1
 
 # run LILAC
-lilac
+lilac deck.txt  # passing "deck.txt" makes it read "./input_deck.txt"
 exit_code=$?
 
 # figure out if the run was successful, and if not, why not
