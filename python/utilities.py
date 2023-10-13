@@ -95,7 +95,7 @@ def fill_in_template(template_filename: str, parameters: dict[str, str], flags: 
 		content = sub(f"<<{key}>>", value, content)
 
 	# check to make sure we got it all
-	remaining_blank = search("<<[a-z ]+>>", content)
+	remaining_blank = search("<<.*>>", content)
 	if remaining_blank:
 		raise KeyError(f"you tried to fill out the template {template_filename} without specifying "
 		               f"the value of {remaining_blank.group()}")

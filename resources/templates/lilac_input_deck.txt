@@ -52,11 +52,11 @@
 ! PARAMETERS FOR LAYER 0: FILL
 &prof
     matcod = <<fill material code>>,
-    phydr = <<fill protium fraction>>,
-    ptrit = <<fill tritium fraction>>,
+    phydr = <<fill protium percentage>>,
+    ptrit = <<fill tritium percentage>>,
     ncell = 150,
     thick = <<fill radius>>,  ! um
-    gas_press = <<fill_pressure>>,  ! atm
+    gas_press = <<fill pressure>>,  ! atm
     ieos = 8,  ! Suxing Hu's first-principles EOS table
     izion = 1,  ! astrophysical ionization table
     iopac = 8,  ! first-principles opacity table
@@ -69,8 +69,8 @@
 ! PARAMETERS FOR LAYER 1: SHELL
 &prof
     matcod = <<shell material code>>,
-    phydr = <<shell protium fraction>>,
-    ptrit = <<shell tritium fraction>>,
+    phydr = <<shell protium percentage>>,
+    ptrit = <<shell tritium percentage>>,
     ncell = 150,
     thick = <<shell thickness>>,  ! um
 <<if density specified>>
