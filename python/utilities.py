@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
-import re
 from datetime import datetime
+from re import fullmatch, sub, DOTALL, search
 from typing import Optional
 
 import numpy as np
@@ -63,6 +63,43 @@ def log_message(message: str) -> None:
 def submit_slurm_job(script: str) -> str:
 	""" submit a bash script to slurm using sbatch, and return the resulting job's ID number """
 	return "420"
+
+
+def fill_in_template(template_filename: str, parameters: dict[str, str], flags: Optional[dict[str, bool]] = None) -> str:
+	""" load a template from resources/templates and replace all of the angle-bracket-marked
+	    parameter names with actual user-specified parameters
+	    :param template_filename: the filename of the template to load, excluding resources/templates/
+	    :param parameters: the set of strings that should be inserted into the <<>> spots
+	    :param flags: a set of booleans to be used to evaluate <<if>> blocks
+	    :return: a string containing the contents of the template with all the <<>>s evaluated
+	    :raise KeyError: if there is a <<>> expression in the template and the corresponding value is not
+	                     given in parameters or flags
+	"""
+	with open(f"resources/templates/{template_filename}") as template_file:
+		content = template_file.read()
+
+	# start with the flags
+	if flags is not None:
+		for key, active in flags.items():
+			# if it's active, remove the <<if>> and <<endif>> lines
+			if active:
+				content = sub(f"<<if {key}>>\n", "", content)
+				content = sub(f"<<endif {key}>>\n", "", content)
+			# if it's inactive, remove the <<if>> and <<endif>> lines and everything between them
+			else:
+				content = sub(f"<<if {key}>>.*<<endif {key}>>\n", "", content, flags=DOTALL)
+	# then do the parameter values
+	for key, value in parameters.items():
+		content = sub(f"<<{key}>>", value, content)
+
+	# check to make sure we got it all
+	remaining_blank = search("<<[a-z ]+>>", content)
+	if remaining_blank:
+		raise KeyError(f"you tried to fill out the template {template_filename} without specifying "
+		               f"the value of {remaining_blank.group()}")
+
+	return content
+
 
 
 def load_pulse_shape(pulse_shape_name: str, total_energy: float) -> tuple[NDArray[float], NDArray[float]]:
@@ -216,7 +253,7 @@ def parse_gas_components(descriptor: str) -> dict[str, float]:
 	parts = descriptor.split("+")
 	components = {}
 	for part in parts:
-		reading = re.fullmatch(r"\s*([0-9.]+)(\s?atm)?\s*([0-9]*[A-Z][a-z]?)2?\s*", part)
+		reading = fullmatch(r"\s*([0-9.]+)(\s?atm)?\s*([0-9]*[A-Z][a-z]?)2?\s*", part)
 		if reading is None:
 			raise ValueError(f"cannot parse '{part}'")
 		pressure = float(reading.group(1))

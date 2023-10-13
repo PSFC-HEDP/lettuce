@@ -4,7 +4,8 @@ import pytest
 from numpy import nan
 
 from python.utilities import load_pulse_shape, find_best_D3He_material_code, get_shell_material_from_name, Material, \
-	get_gas_material_from_components, parse_gas_components, load_inputs_table, load_outputs_table, log_message
+	get_gas_material_from_components, parse_gas_components, load_inputs_table, load_outputs_table, log_message, \
+	fill_in_template
 
 
 def test_load_inputs_table():
@@ -23,6 +24,15 @@ def test_log_message():
 
 def test_submit_slurm_job():
 	pass
+
+
+def test_fill_in_template():
+	expected_output = "krabs is a nice person\n"
+	actual_output = fill_in_template(
+		"../../tests/template.txt",
+		parameters={"noun": "nice person"},
+		flags={"true": True, "false": False})
+	assert actual_output == expected_output
 
 
 def test_load_pulse_shape():
