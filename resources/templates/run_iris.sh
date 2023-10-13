@@ -29,7 +29,7 @@ fi
 
 # log the result to the slurm log and to runs.log
 echo "${exit_string}"
-echo "$(date +'%m-%d %H:%M') | ${exit_string}" > ../../../runs.log
+echo "$(date +'%m-%d %H:%M') | ${exit_string}" >> ../../../runs.log
 
 # Move the file out of the "output" directory
 if [ $exit_code -eq 0 ]; then
