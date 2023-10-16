@@ -6,7 +6,7 @@ from re import search
 from subprocess import run
 
 import numpy as np
-from pandas import Series, Timestamp, concat
+from pandas import Series, Timestamp, concat, notnull
 
 from material import Material, get_solid_material_from_name, get_gas_material_from_components
 from utilities import load_pulse_shape, parse_gas_components, load_beam_profile, load_inputs_table, \
@@ -109,7 +109,7 @@ def build_lilac_input_deck(
 			"name": name,
 			"absorption fraction": f"{inputs['absorption fraction']:.4f}",
 			"nonthermal model": "none" if inputs["flux limiter"] > 0 else "vgon",
-			"flux limiter": f"{inputs['flux limiter']:.3f}",
+			"flux limiter": f"{inputs['flux limiter']:.3f}" if inputs["flux limiter"] > 0 else "0",
 			# first prof namelist (fill)
 			"fill material code": f"{fill_material.material_code:d}",
 			"fill protium percentage": f"{fill_material.protium_fraction*100:.2f}",
@@ -127,7 +127,7 @@ def build_lilac_input_deck(
 			"shell opacity option": f"{shell_material.opacity:d}",
 			"shell ionization option": f"{shell_material.ionization:d}",
 			"shell density": f"{shell_material.density:.3f}" if shell_material.density is not None else "None",
-			"shell density multiplier": f"{inputs['density multiplier']:.4f}",
+			"shell density multiplier": f"{inputs['density multiplier']:.4f}" if notnull(inputs["density multiplier"]) else "1",
 			"shell thickness": f"{inputs['shell thickness']:.2f}",
 			# third prof namelist (aluminum)
 			"aluminum thickness": f"{inputs['aluminum thickness']:.2f}",
