@@ -57,9 +57,9 @@
     ncell = 150,
     thick = <<fill radius>>,  ! um
     gas_press = <<fill pressure>>,  ! atm
-    ieos = 8,  ! Suxing Hu's first-principles EOS table
-    izion = 1,  ! astrophysical ionization table
-    iopac = 8,  ! first-principles opacity table
+    ieos = <<fill EOS option>>,
+    izion = <<fill ionization option>>,
+    iopac = <<fill opacity option>>,
     itnuc = 4,  ! DD, DT, and D3He reactions
     eqrad = .false.,  ! equal-mass zoning
     feather = .false.,  ! no feathering outer zones
@@ -77,9 +77,9 @@
     dens_mat = <<shell density>>,  ! g/cm3
 <<endif density specified>>
     densf = <<shell density multiplier>>,
-    ieos = 8,  ! Suxing Hu's first-principles EOS table
-    izion = 1,  ! astrophysical ionization table
-    iopac = 1,  ! astrophysical opacity table
+    ieos = <<shell EOS option>>,
+    izion = <<shell ionization option>>,
+    iopac = <<shell opacity option>>,
     itnuc = 0,  ! burn off
     eqrad = .false.,
     feather = .false.,

@@ -8,9 +8,9 @@ from subprocess import run
 import numpy as np
 from pandas import Series, Timestamp, concat
 
-from utilities import load_pulse_shape, get_shell_material_from_name, get_gas_material_from_components, \
-	parse_gas_components, load_beam_profile, Material, load_inputs_table, load_outputs_table, log_message, \
-	fill_in_template
+from material import Material, get_solid_material_from_name, get_gas_material_from_components
+from utilities import load_pulse_shape, parse_gas_components, load_beam_profile, load_inputs_table, \
+	load_outputs_table, log_message, fill_in_template
 
 
 def start_lilac_run(name: str, force: bool) -> None:
@@ -62,7 +62,7 @@ def start_lilac_run(name: str, force: bool) -> None:
 		return
 
 	# parse the materials
-	shell_material = get_shell_material_from_name(inputs["shell material"])
+	shell_material = get_solid_material_from_name(inputs["shell material"])
 	fill_material = get_gas_material_from_components(parse_gas_components(inputs["fill"]))
 
 	# compose the input deck and bash script
@@ -114,15 +114,21 @@ def build_lilac_input_deck(
 			"fill material code": f"{fill_material.material_code:d}",
 			"fill protium percentage": f"{fill_material.protium_fraction*100:.2f}",
 			"fill tritium percentage": f"{fill_material.tritium_fraction*100:.2f}",
+			"fill EOS option": f"{fill_material.eos:d}",
+			"fill opacity option": f"{fill_material.opacity:d}",
+			"fill ionization option": f"{fill_material.ionization:d}",
 			"fill pressure": f"{fill_material.pressure:.3f}",
 			"fill radius": f"{inputs['outer diameter']/2 - inputs['shell thickness']:.2f}",
 			# second prof namelist (shell)
 			"shell material code": f"{shell_material.material_code:d}",
 			"shell protium percentage": f"{shell_material.protium_fraction*100:.2f}",
 			"shell tritium percentage": f"{shell_material.tritium_fraction*100:.2f}",
-			"shell thickness": f"{inputs['shell thickness']:.2f}",
+			"shell EOS option": f"{shell_material.eos:d}",
+			"shell opacity option": f"{shell_material.opacity:d}",
+			"shell ionization option": f"{shell_material.ionization:d}",
 			"shell density": f"{shell_material.density:.3f}" if shell_material.density is not None else "None",
 			"shell density multiplier": f"{inputs['density multiplier']:.4f}",
+			"shell thickness": f"{inputs['shell thickness']:.2f}",
 			# third prof namelist (aluminum)
 			"aluminum thickness": f"{inputs['aluminum thickness']:.2f}",
 		},
