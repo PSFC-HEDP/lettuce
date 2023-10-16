@@ -4,6 +4,7 @@ from re import fullmatch, sub, DOTALL, search
 from typing import Optional
 
 import numpy as np
+from numpy import isfinite
 from numpy.typing import NDArray
 from pandas import read_csv, DataFrame, Series
 
@@ -62,6 +63,12 @@ def fill_in_template(template_filename: str, parameters: dict[str, str], flags: 
 
 	# start with the parameter values
 	for key, value in parameters.items():
+		if value == "nan":
+			raise ValueError("you should never pass 'nan' into an input deck.  is this pandas's doing?  god, I "
+			                 "wish pandas wouldn't use nan as a missing placeholder; that's so incredibly not "
+			                 "what it's for.  onestly I just wish nan didn't exist.   it's like javascript null.  "
+			                 "anyway, check your inputs.  make sure none of them are empty or nan (except the "
+			                 "last three, which may be empty).")
 		if search(f"<<{key}>>", content):
 			content = sub(f"<<{key}>>", value, content)
 		else:
@@ -90,6 +97,10 @@ def load_pulse_shape(pulse_shape_name: str, total_energy: float) -> tuple[NDArra
 	""" load a pulse shape from disk
 	    :return: the time (ns) and total laser power (TW)
 	"""
+	if not isfinite(total_energy):
+		raise ValueError("any arithmetic operation involving nan should raise an error in my opinion. since "
+		                 "numpy won't do that for me, I'm doing it here now. this laser energy is nan. check "
+		                 "your input table before you wreck your input table.")
 	filepath = f"resources/pulse_shapes/{pulse_shape_name}.json"
 	try:
 		with open(filepath, "r") as file:
