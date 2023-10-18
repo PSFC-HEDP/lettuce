@@ -8,8 +8,8 @@ from subprocess import run
 import numpy as np
 from pandas import Series, Timestamp, concat, notnull
 
-from material import Material, get_solid_material_from_name, get_gas_material_from_components
-from utilities import load_pulse_shape, parse_gas_components, load_beam_profile, load_inputs_table, \
+from python.material import Material, get_solid_material_from_name, get_gas_material_from_components
+from python.data_io import load_pulse_shape, parse_gas_components, load_beam_profile, load_inputs_table, \
 	load_outputs_table, log_message, fill_in_template
 
 
