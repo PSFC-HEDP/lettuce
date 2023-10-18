@@ -89,14 +89,16 @@ and generate a PDF containing spectra and images in its run directory.
 
 ## Run inputs
 
-Runs are defined in run_inputs.csv.
+Runs are defined in `run_inputs.csv`.
 Each row contains a unique name for the run followed by all the information needed to run the simulation.
 The columns are as follows:
 
+- **name**  
+  A uniquely identifying string for this simulation.
 - **laser energy**  
-   The total time-integrated energy incident on the capsule, in kilojoules.
+  The total time-integrated energy incident on the capsule, in kilojoules.
 - **pulse shape**  
-   The name of the laser pulse shape.  The 1 ns square pulse is "SG10v001".  If you're not sure what the name of your pulse shape is, consult the [OMEGA pulse shape library](https://omegaops.lle.rochester.edu/cgi-script/pulseShapes).
+  The name of the laser pulse shape.  The 1 ns square pulse is "SG10v001".  If you're not sure what the name of your pulse shape is, consult the [OMEGA pulse shape library](https://omegaops.lle.rochester.edu/cgi-script/pulseShapes).
 - **beam profile**  
   The name of the beam profile.  For most people it will be "SG5 SSD".
 - **outer diameter**  
@@ -117,3 +119,27 @@ The columns are as follows:
   If this is given and nonzero, the laser pulse will be cut short by this many picoseconds.  This is primarily used for matching simulated yields to experimental ones.
 - **density multiplier**  
   The optional factor by which the shell density should differ from whatever it normally is for that material.  This can be used to match simulated ρRs to experimental ones.
+
+## Key run outputs
+
+The run outputs are described in detail in the `output.pdf` file of each run directory.
+For a conglomerated summary, tho, one can look at `run_outputs.csv`.
+The columns are as follows:
+- **name**  
+  The uniquely identifying string for this simulation.
+- **slurm ID**  
+  The ID number assigned by Slurm to the most recent job that was submitted related to this.
+- **status**  
+  The state of the Slurm job; one of "pending", "running", "completed", "failed", or "timed out".
+- **status changed**  
+  The date and time at which the status of the Slurm job last changed.
+- **yield**  
+  The nuclear yield of the implosion (for whichever nuclear reaction had the highest yield).
+- **bang-time**  
+  The time of peak nuclear emission (for whichever nuclear reaction had the highest yield), in nanoseconds.
+- **convergence ratio**  
+  The ratio between the initial radius of the gas fill and the minimum radius of the gas fill.
+- **areal density**  
+  The burn-averaged ρR, in milligrams per square centimeter.
+- **ion temperature**  
+  The burn-averaged ion temperature, in kiloelectron-volts.

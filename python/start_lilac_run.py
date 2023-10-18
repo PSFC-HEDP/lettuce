@@ -23,12 +23,12 @@ def start_lilac_run(name: str, force: bool) -> None:
 	outputs_table = load_outputs_table()
 
 	# assess the current state of this run
-	if (name, "LILAC") not in outputs_table.index:
+	if name not in outputs_table.index:
 		current_status = "new"
 	elif not os.path.isdir(f"runs/{name}/lilac"):
 		current_status = "new"
 	else:
-		current_status = outputs_table.loc[(name, "LILAC"), "status"]
+		current_status = outputs_table.loc[name, "status"]
 	# if it's already running and the user didn't force it, stop work immediately
 	if current_status in ["running", "completed", "pending"] and not force:
 		print(f"this run seems to already be {current_status}.  to overwrite it, use the --force "
@@ -37,7 +37,7 @@ def start_lilac_run(name: str, force: bool) -> None:
 	# if it's already running and the user did force it, cancel the run
 	elif current_status == "pending" or current_status == "running":
 		print(f"cancelling the current run...")
-		run(["scancel", outputs_table.loc[(name, "LILAC"), "slurm ID"]])
+		run(["scancel", outputs_table.loc[name, "slurm ID"]])
 	# if it's already run and the user did force it, clear the previous output
 	elif current_status == "completed":
 		print(f"overwriting the previous run...")
@@ -88,7 +88,6 @@ def start_lilac_run(name: str, force: bool) -> None:
 	# update our records
 	write_row_to_outputs_table({
 		"name": name,
-		"code": "LILAC",
 		"status": "pending",
 		"status changed": Timestamp.now(),
 		"slurm ID": slurm_ID,

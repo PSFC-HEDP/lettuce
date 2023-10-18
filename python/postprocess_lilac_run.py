@@ -6,9 +6,8 @@ from matplotlib import pyplot as plt, colors
 from numpy import stack, tile, diff, cumsum, float64
 from pandas import Timestamp
 
-from python.data_io import load_outputs_table, write_row_to_outputs_table
+from python.data_io import write_row_to_outputs_table
 from python.utilities import apparent_brightness, width, gradient
-
 
 plt.rcParams["font.size"] = 12
 
@@ -148,7 +147,7 @@ def postprocess_lilac_run(name: str) -> None:
 			start = solution["target/first_zone"][i] - 2
 			end = solution["target/last_zone"][i] - 1
 			areal_density[interface_name] = np.sum(
-				(mass_density*diff(node_position, axis=0))[start:end, :], axis=0)*1e-4  # (g/cm^2)
+				(mass_density*diff(node_position, axis=0))[start:end, :], axis=0)*1e-4*1e3  # (mg/cm^2)
 		areal_density["total"] = areal_density["fill"] + areal_density["shell"]
 
 		average_temperature = {}
@@ -169,7 +168,6 @@ def postprocess_lilac_run(name: str) -> None:
 	# update our records
 	write_row_to_outputs_table({
 		"name": name,
-		"code": "LILAC",
 		"status": "completed",
 		"status changed": Timestamp.now(),
 		"yield": total_yield[main_reaction][-1],
