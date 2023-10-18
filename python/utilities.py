@@ -1,6 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
-from numpy import expand_dims, geomspace, arange, interp, exp, sqrt
+from numpy import expand_dims, geomspace, arange, interp, exp, sqrt, isfinite, inf
 from numpy.typing import NDArray
 from scipy import integrate
 
@@ -18,14 +18,32 @@ def gradient(y: NDArray[float], x: NDArray[float], **kwargs):
 
 
 def width(x: NDArray[float], y: NDArray[float]):
-	""" calculate the full-width at half-max of a curve """
+	""" calculate the full-width at half-max of a curve.
+	    this function isn't very fast, but that's okay.
+	    :return: the FWHM if calculable.  if the peak goes off the end or there is no peak, return inf.
+	"""
 	if x.shape != y.shape or x.ndim != 1:
 		raise ValueError
+	if x.size == 0:
+		return inf
 	maximum = np.argmax(y)
 	height = y[maximum]
-	left_point = interp(height/2, y[0:maximum + 1], x[0:maximum + 1])
-	rite_point = interp(height/2, y[x.size:maximum - 1:-1], x[x.size:maximum - 1:-1])
-	return rite_point - left_point
+	if height <= 0:
+		return inf
+	x_left = None
+	for i in range(maximum - 1, -1, -1):
+		if y[i] <= height/2:
+			x_left = interp(height/2, [y[i], y[i + 1]], [x[i], x[i + 1]])
+			break
+	x_rite = None
+	for i in range(maximum + 1, x.size):
+		if y[i] <= height/2:
+			x_rite = interp(height/2, [y[i], y[i - 1]], [x[i], x[i - 1]])
+			break
+	if x_left is None or x_rite is None:
+		return inf
+	else:
+		return x_rite - x_left
 
 
 def apparent_brightness(ionization: NDArray[float], electron_number_density: NDArray[float],
@@ -45,6 +63,14 @@ def apparent_brightness(ionization: NDArray[float], electron_number_density: NDA
 	# account for sensitivity and transmission
 	hν = expand_dims(geomspace(1e0, 1e3, 61), axis=tuple(1 + arange(ionization.ndim)))  # (keV)
 	log_sensitivity = image_plate.log_xray_sensitivity(hν, filter_stack)
+
+	# catch arithmetic errors before they happen
+	if not np.all(isfinite(ionization) & (ionization > 0)):
+		raise ValueError(f"some inputs to apparent_brightness() were invalid: Z={ionization:.5g}")
+	if not np.all(isfinite(electron_number_density) & (electron_number_density >= 0)):
+		raise ValueError(f"some inputs to apparent_brightness() were invalid: ne={electron_number_density:.5g}cm^-3")
+	if not np.all(isfinite(electron_temperature) & (electron_temperature > 0)):
+		raise ValueError(f"some inputs to apparent_brightness() were invalid: Te={electron_temperature:.5g}keV")
 
 	# finally, account for the original spectrum (thus expanding the array to 3d)
 	Z = ionization
