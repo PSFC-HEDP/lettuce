@@ -40,8 +40,10 @@ def postprocess_lilac_run(name: str) -> None:
 		start_index = np.argmax(laser_power > laser_power.max()*1e-2)
 		time = time - time[start_index]
 
+		# find the node and interface positions
 		node_position = solution["node/boundary_position"][:, :]  # (μm)
-		radius = node_position[-1, :]
+		interface_indices = solution["target/last_zone"][:] - 1  # subtract 1 because LILAC indexes from 2
+		interface_position = node_position[interface_indices, :]
 
 		# pull out the different cumulative yield arrays
 		reactions = {"DD-n", "DT-n", "D3He-p"}
@@ -89,18 +91,15 @@ def postprocess_lilac_run(name: str) -> None:
 		plt.pcolormesh(node_time, node_position, intertime_ion_temperature,
 		               cmap="inferno", norm=colors.LogNorm(vmin=.05, vmax=50))
 		plt.xlim(0, min(np.max(time), bang_time["all fusion"] + 1))
-		plt.ylim(0, 1.2*radius[0])
+		plt.ylim(0, 1.2*interface_position[-1, 0])
 		plt.xlabel(f"Time (ns)")
 		plt.ylabel(f"Position (μm)")
 		plt.colorbar(label=f"Ion temperature (keV)")
 		plt.title(name)
 		plt.tight_layout()
 
-		interface_positions = []
 		for i in range(num_layers):
-			interface_index = solution["target/last_zone"][i] - 1  # subtract 1 because LILAC indexes from 2
-			interface_positions.append(node_position[interface_index, :])
-			plt.plot(time, interface_positions[-1], 'w-', linewidth=1)
+			plt.plot(time, interface_position[i, :], 'w-', linewidth=1)
 
 		plt.savefig(f'{directory}/rt_plot.png', dpi=300)
 
@@ -145,10 +144,10 @@ def postprocess_lilac_run(name: str) -> None:
 		# calculate the time-resolved areal density by zone
 		mass_density = solution["zone/mass_density"]
 		areal_density = {}
-		for i, name in enumerate(["fill", "shell"]):
+		for i, interface_name in enumerate(["fill", "shell"]):
 			start = solution["target/first_zone"][i] - 2
 			end = solution["target/last_zone"][i] - 1
-			areal_density[name] = np.sum(
+			areal_density[interface_name] = np.sum(
 				(mass_density*diff(node_position, axis=0))[start:end, :], axis=0)*1e-4  # (g/cm^2)
 		areal_density["total"] = areal_density["fill"] + areal_density["shell"]
 
@@ -163,8 +162,9 @@ def postprocess_lilac_run(name: str) -> None:
 			weights = total_yield_rate[reaction]
 			average_areal_density[reaction] = np.sum(areal_density["total"]*weights)/np.sum(weights)
 
-	# calculate convergence ratio
-	convergence_ratio = interface_positions[0][0]/np.min(interface_positions[0])
+	# calculate convergence ratio (defining radius with the gas-shell interface)
+	radius = interface_position[0, :]
+	convergence_ratio = radius[0]/np.min(radius)
 
 	# update our records
 	write_row_to_outputs_table({
