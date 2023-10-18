@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt, colors
 from numpy import stack, tile, diff, cumsum, float64
 from pandas import Timestamp
 
-from python.data_io import load_outputs_table
+from python.data_io import load_outputs_table, write_row_to_outputs_table
 from python.utilities import apparent_brightness, width, gradient
 
 
@@ -167,15 +167,17 @@ def postprocess_lilac_run(name: str) -> None:
 	convergence_ratio = interface_positions[0][0]/np.min(interface_positions[0])
 
 	# update our records
-	outputs_table = load_outputs_table()
-	outputs_table.loc[(name, "LILAC"), "status"] = "completed"
-	outputs_table.loc[(name, "LILAC"), "status changed"] = Timestamp.now()
-	outputs_table.loc[(name, "LILAC"), "yield"] = total_yield[main_reaction][-1]
-	outputs_table.loc[(name, "LILAC"), "bang-time"] = bang_time[main_reaction]
-	outputs_table.loc[(name, "LILAC"), "convergence ratio"] = convergence_ratio
-	outputs_table.loc[(name, "LILAC"), "areal density"] = average_areal_density[main_reaction]
-	outputs_table.loc[(name, "LILAC"), "ion temperature"] = average_temperature[main_reaction]
-	outputs_table.to_csv("run_outputs.csv")
+	write_row_to_outputs_table({
+		"name": name,
+		"code": "LILAC",
+		"status": "completed",
+		"status changed": Timestamp.now(),
+		"yield": total_yield[main_reaction][-1],
+		"bang-time": bang_time[main_reaction],
+		"convergence ratio": convergence_ratio,
+		"areal density": average_areal_density[main_reaction],
+		"ion temperature": average_temperature[main_reaction],
+	})
 
 
 if __name__ == "__main__":
