@@ -1,163 +1,66 @@
-import json
-from datetime import datetime
-from re import fullmatch, sub, DOTALL, search
-from typing import Optional
-
 import numpy as np
-from numpy import isfinite
+from matplotlib import pyplot as plt
+from numpy import expand_dims, geomspace, arange, interp, exp, sqrt
 from numpy.typing import NDArray
-from pandas import read_csv, DataFrame, Series
+from scipy import integrate
 
-INPUT_DTYPES = {
-	"name": str,
-	"laser energy": float, "pulse shape": str, "beam profile": str,
-	"outer diameter": float, "fill": str,
-	"shell material": str, "shell thickness": float, "aluminum thickness": float,
-	"absorption fraction": float, "flux limiter": float,
-	"laser degradation": float, "density multiplier": float,
-}
-OUTPUT_DTYPES = {
-	"name": str, "code": str,
-	"status": str, "status changed": str, "slurm ID": str,
-	"yield": float, "bang-time": float, "convergence ratio": float, "ρR": float,
-	"ion temperature": float, "electron temperature": float,
-}
-
-def load_inputs_table() -> DataFrame:
-	""" load the table containing the specifications for all of the runs """
-	return read_csv(
-		"run_inputs.csv", skipinitialspace=True, index_col="name", dtype=INPUT_DTYPES)
+from python import image_plate
 
 
-def load_outputs_table() -> DataFrame:
-	""" load the table into which we will dump all of the run outputs """
-	try:
-		return read_csv(
-			"run_outputs.csv", skipinitialspace=True, index_col=["name", "code"],
-			dtype=OUTPUT_DTYPES, parse_dates=["status changed"])
-	except IOError:
-		table = DataFrame({key: Series(dtype=dtype) for key, dtype in OUTPUT_DTYPES.items()})
-		table.set_index(["name", "code"], inplace=True)
-		return table
+def gradient(y: NDArray[float], x: NDArray[float], **kwargs):
+	""" it's numpy.gradient but it fixes the roundoff errors you get with inequal steps """
+	# find indices where there is exactly zero change
+	flat = (y[0:-2] == y[1:-1]) & (y[1:-1] == y[2:])
+	# account for the edges, conservatively assuming we plan to use 2nd order edges
+	flat = np.concatenate([[flat[0]], flat, [flat[-1]]])
+	# call the numpy function, slotting in zero where we know it should be zero
+	return np.where(~flat, np.gradient(y, x, **kwargs), 0)
 
 
-def log_message(message: str) -> None:
-	""" write a timestamped message to the runs log file, and also stdout """
-	with open("runs.log", "a") as file:
-		file.write(datetime.today().strftime('%m-%d %H:%M') + " | " + message + "\n")
-	print(message)
+def width(x: NDArray[float], y: NDArray[float]):
+	""" calculate the full-width at half-max of a curve """
+	if x.shape != y.shape or x.ndim != 1:
+		raise ValueError
+	maximum = np.argmax(y)
+	height = y[maximum]
+	left_point = interp(height/2, y[0:maximum + 1], x[0:maximum + 1])
+	rite_point = interp(height/2, y[x.size:maximum - 1:-1], x[x.size:maximum - 1:-1])
+	return rite_point - left_point
 
 
-def fill_in_template(template_filename: str, parameters: dict[str, str], flags: Optional[dict[str, bool]] = None) -> str:
-	""" load a template from resources/templates and replace all of the angle-bracket-marked
-	    parameter names with actual user-specified parameters
-	    :param template_filename: the filename of the template to load, excluding resources/templates/
-	    :param parameters: the set of strings that should be inserted into the <<>> spots
-	    :param flags: a set of booleans to be used to evaluate <<if>> blocks
-	    :return: a string containing the contents of the template with all the <<>>s evaluated
-	    :raise KeyError: if there is a <<>> expression in the template and the corresponding value is not
-	                     given in parameters or flags
+def apparent_brightness(ionization: NDArray[float], electron_number_density: NDArray[float],
+                        electron_temperature: NDArray[float], filter_stack=None, show_plot=False
+                        ) -> NDArray[float]:
+	""" how much of the emission would be detected by an image plate
+		:param ionization: the spatio-temporally resolved average ion charge
+		:param electron_number_density: the spacio-temporally resolved electron number density (cm^-3)
+		:param electron_temperature: the spacio-temporally resolved electron temperature (keV)
+		:param filter_stack: the filter specifications as (thickness (μm), material name)
+		:param show_plot: whether to plot and show a spectrum before returning
+		:return: the spacio-temporally resolved
 	"""
-	with open(f"resources/templates/{template_filename}") as template_file:
-		content = template_file.read()
+	if filter_stack is None:
+		filter_stack = []
 
-	# start with the parameter values
-	for key, value in parameters.items():
-		if value == "nan":
-			raise ValueError("you should never pass 'nan' into an input deck.  is this pandas's doing?  god, I "
-			                 "wish pandas wouldn't use nan as a missing placeholder; that's so incredibly not "
-			                 "what it's for.  onestly I just wish nan didn't exist.   it's like javascript null.  "
-			                 "anyway, check your inputs.  make sure none of them are empty or nan (except the "
-			                 "last three, which may be empty).")
-		if search(f"<<{key}>>", content):
-			content = sub(f"<<{key}>>", value, content)
-		else:
-			raise KeyError(f"the parameter <<{key}>> was not found in the template {template_filename}.")
+	# account for sensitivity and transmission
+	hν = expand_dims(geomspace(1e0, 1e3, 61), axis=tuple(1 + arange(ionization.ndim)))  # (keV)
+	log_sensitivity = image_plate.log_xray_sensitivity(hν, filter_stack)
 
-	# then do the flags
-	if flags is not None:
-		for key, active in flags.items():
-			# if it's active, remove the <<if>> and <<endif>> lines
-			if active:
-				content = sub(f"<<if {key}>>\n", "", content)
-				content = sub(f"<<endif {key}>>\n", "", content)
-			# if it's inactive, remove the <<if>> and <<endif>> lines and everything between them
-			else:
-				content = sub(f"<<if {key}>>.*<<endif {key}>>\n", "", content, flags=DOTALL)
-	# check to make sure we got it all
-	remaining_blank = search("<<.*>>", content)
-	if remaining_blank:
-		raise KeyError(f"you tried to fill out the template {template_filename} without specifying "
-		               f"the value of <<{remaining_blank.group()}>>")
+	# finally, account for the original spectrum (thus expanding the array to 3d)
+	Z = ionization
+	ne = electron_number_density
+	ni = ne/Z
+	Te = electron_temperature
+	log_emission = -hν/Te
+	emission = Z*ni*ne/sqrt(Te)*exp(log_emission + log_sensitivity)
 
-	return content
+	# plot the curve for my benefit
+	if show_plot:
+		plt.plot(hν, emission)
+		plt.xscale("log")
+		plt.xlabel(f"Energy (keV)")
+		plt.ylabel(f"PSL (?)")
+		plt.show()
 
-
-def load_pulse_shape(pulse_shape_name: str, total_energy: float) -> tuple[NDArray[float], NDArray[float]]:
-	""" load a pulse shape from disk
-	    :return: the time (ns) and total laser power (TW)
-	"""
-	if not isfinite(total_energy):
-		raise ValueError("any arithmetic operation involving nan should raise an error in my opinion. since "
-		                 "numpy won't do that for me, I'm doing it here now. this laser energy is nan. check "
-		                 "your input table before you wreck your input table.")
-	filepath = f"resources/pulse_shapes/{pulse_shape_name}.json"
-	try:
-		with open(filepath, "r") as file:
-			data = json.load(file)
-	except IOError:
-		raise IOError(f"the pulse shape file '{filepath}' is missing.  please "
-		              f"download it from the OmegaOps pulse shape library.")
-	if len(data) != 1:
-		raise ValueError(f"the file '{filepath}' seems to contain multiple pulse "
-		                 f"shapes.  please, when you download pulse shapes from OmegaOps, make sure you only have one "
-		                 f"pusle shape activated each time you download a file.")
-	if data[0]["Pulse"] != pulse_shape_name:
-		raise ValueError(f"the file '{filepath}' seems to contain the information "
-		                 f"for pulse shape {data[0]['Pulse']} instead of {pulse_shape_name}.  Please rename it "
-		                 f"accordingly and download the true pulse shape file for {pulse_shape_name} from OmegaOps.")
-	time = np.empty(len(data[0]["UV"]["data"]))
-	power = np.empty(len(data[0]["UV"]["data"]))
-	for i in range(len(data[0]["UV"]["data"])):
-		time[i] = data[0]["UV"]["data"][i]["x"]/1e-9  # (convert to ns)
-		power[i] = data[0]["UV"]["data"][i]["y"]
-	raw_total = np.sum(power*np.gradient(time))
-	power = power*total_energy/raw_total
-	return time, power
-
-
-def load_beam_profile(beam_profile_name: str) -> tuple[NDArray[float], NDArray[float]]:
-	""" load a beam profile from disk
-	    :return: the radial coordinate (μm) and laser beam intensity (normalized)
-	"""
-	filepath = f"resources/beam_profiles/{beam_profile_name.replace(' ', '_')}.txt"
-	try:
-		data = np.loadtxt(filepath)
-	except IOError:
-		raise IOError(f"the beam profile file '{filepath}' is missing.  please ask Varchas for appropriate data.")
-	if data.shape[1] != 2 or data[-1, 0] != -1 or data[-1, 1] != 0:
-		raise ValueError(f"the file '{filepath}' seems wrong.  it should be a two-column whitespace-separated value "
-		                 f"file with '-1 0' for the last row.")
-	return data[:, 0], data[:, 1]
-
-
-def parse_gas_components(descriptor: str) -> dict[str, float]:
-	""" read a string that contains information about the components and pressure of a gas mixture
-	    :param descriptor: a string containing a list of nuclides and partial pressures.  it should look something
-	                       like this: "12atm 3He + 6atm D". Each component is given as a molecular pressure at 293K
-	                       followed by the name of the element. Note that these are molecular pressures. "D" and "D2"
-	                       are interchangeable.
-	    :raise ValueError: if the given descriptor cannot be parsed for whatever reason
-	"""
-	parts = descriptor.split("+")
-	components = {}
-	for part in parts:
-		reading = fullmatch(r"\s*([0-9.]+)(\s?atm)?\s*([0-9]*[A-Z][a-z]?)2?\s*", part)
-		if reading is None:
-			raise ValueError(f"cannot parse '{part}'")
-		pressure = float(reading.group(1))
-		nuclide = reading.group(3)
-		if nuclide in components:
-			raise ValueError(f"the nuclide '{nuclide}' seems to appear twice in '{descriptor}'.")
-		components[nuclide] = pressure
-	return components
+	# finally, integrate over energy
+	return integrate.trapz(x=hν, y=emission, axis=0)

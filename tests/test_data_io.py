@@ -4,7 +4,7 @@ import shutil
 import numpy as np
 import numpy.testing as npt
 
-from python.utilities import load_pulse_shape, \
+from python.data_io import load_pulse_shape, \
 	parse_gas_components, load_inputs_table, load_outputs_table, log_message, \
 	fill_in_template
 
