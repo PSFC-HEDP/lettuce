@@ -24,7 +24,7 @@ exit_code=$?
 if [ $exit_code -eq 0 ]; then
 	exit_string="IRIS run '<<name>>' completes successfully."
 else
-	exit_string="IRIS run '<<name>>' fails with error_code ${exit_code} (see <<directory>>/iris_$SLURM_JOB_ID.log)."
+	exit_string="IRIS run '<<name>>' fails with error_code ${exit_code} (see '<<directory>>/iris_$SLURM_JOB_ID.log')."
 fi
 
 # log the result to the slurm log and to runs.log
