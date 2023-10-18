@@ -17,10 +17,9 @@ INPUT_DTYPES = {
 	"laser degradation": float, "density multiplier": float,
 }
 OUTPUT_DTYPES = {
-	"name": str, "code": str,
-	"status": str, "status changed": str, "slurm ID": str,
+	"name": str, "slurm ID": str, "status": str, "status changed": str,
 	"yield": float, "bang-time": float, "convergence ratio": float, "areal density": float,
-	"ion temperature": float, "electron temperature": float,
+	"ion temperature": float,
 }
 
 def load_inputs_table() -> DataFrame:
@@ -33,44 +32,42 @@ def load_outputs_table() -> DataFrame:
 	""" load the table into which we will dump all of the run outputs """
 	try:
 		return read_csv(
-			"run_outputs.csv", skipinitialspace=True, index_col=["name", "code"],
+			"run_outputs.csv", skipinitialspace=True, index_col="name",
 			dtype=OUTPUT_DTYPES, parse_dates=["status changed"])
 	except IOError:
 		table = DataFrame({key: Series(dtype=dtype) for key, dtype in OUTPUT_DTYPES.items()})
-		table.set_index(["name", "code"], inplace=True)
+		table.set_index("name", inplace=True)
 		return table
 
 
 def write_row_to_outputs_table(row: dict[str, Any], drop_previous_data=False) -> None:
 	""" load the input table, edit an existing row or add a new one, and save the updated version. """
-	if "name" not in row or "code" not in row:
-		raise KeyError("both 'name' and 'code' must be present in any row you want to add to the outputs table.")
+	if "name" not in row:
+		raise KeyError("the key 'name' must be present in any row you want to add to the outputs table.")
 	for key in row.keys():
 		if key not in OUTPUT_DTYPES.keys():
 			raise KeyError(f"the row you're appending to the outputs table has a '{key}', which is not a collum of the outputs table.")
 	row = row.copy()
 
-	# extract the index from the rest of the data
-	label = (row["name"], row["code"])
-	row.pop("name")
-	row.pop("code")
+	name = row["name"]
 
 	table = load_outputs_table()
 
 	# if this row is already present in the table
-	if label in table.index:
+	if name in table.index:
 		if not drop_previous_data:
 			# load in any existing values (but overwrite with new data when applicable)
-			row = {**table.loc[label], **row}
+			row = {**table.loc[name], **row}
 		# and remove that existing row from the table
-		table.drop(label, inplace=True)
+		table.drop(name, inplace=True)
 
 	# append it to the table (I'm so mad they deprecated .append and now I have to do this garbage)
-	row = DataFrame(index=[label], data=[row])
+	row = DataFrame([row])
+	row.set_index("name", inplace=True)
 	table = concat([table, row])
 
 	# sort the table before saving it
-	table.sort_values(by=["name", "code"], inplace=True)
+	table.sort_values(by="name", inplace=True)
 	table.to_csv("run_outputs.csv", float_format="%.6g", date_format="%Y-%m-%d %H:%M:%S")
 
 

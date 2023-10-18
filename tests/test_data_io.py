@@ -27,16 +27,13 @@ def test_write_row_to_ouputs_table():
 	with pytest.raises(KeyError):
 		write_row_to_outputs_table({"yield": 4e17})
 	with pytest.raises(KeyError):
-		write_row_to_outputs_table({"name": "test", "code": "LETTUCE",
-		                            "x": 0, "y": 2})
-	write_row_to_outputs_table({"name": "test", "code": "LETTUCE",
-	                            "yield": 4e17}, drop_previous_data=True)
-	assert load_outputs_table().loc[("test", "LETTUCE"), "yield"] == 4e17
-	assert isnull(load_outputs_table().loc[("test", "LETTUCE"), "bang-time"])
-	write_row_to_outputs_table({"name": "test", "code": "LETTUCE",
-	                            "yield": 8e17, "bang-time": 1.5})
-	assert load_outputs_table().loc[("test", "LETTUCE"), "yield"] == 8e17
-	assert load_outputs_table().loc[("test", "LETTUCE"), "bang-time"] == 1.5
+		write_row_to_outputs_table({"name": "test", "x": 0, "y": 2})
+	write_row_to_outputs_table({"name": "test", "yield": 4e17}, drop_previous_data=True)
+	assert load_outputs_table().loc["test", "yield"] == 4e17
+	assert isnull(load_outputs_table().loc["test", "bang-time"])
+	write_row_to_outputs_table({"name": "test", "yield": 8e17, "bang-time": 1.5})
+	assert load_outputs_table().loc["test", "yield"] == 8e17
+	assert load_outputs_table().loc["test", "bang-time"] == 1.5
 
 
 def test_log_message():
