@@ -1,12 +1,12 @@
 import json
 from datetime import datetime
 from re import fullmatch, sub, DOTALL, search
-from typing import Optional
+from typing import Optional, Any
 
 import numpy as np
 from numpy import isfinite
 from numpy.typing import NDArray
-from pandas import read_csv, DataFrame, Series
+from pandas import read_csv, DataFrame, Series, concat, Timestamp
 
 INPUT_DTYPES = {
 	"name": str,
@@ -39,6 +39,37 @@ def load_outputs_table() -> DataFrame:
 		table = DataFrame({key: Series(dtype=dtype) for key, dtype in OUTPUT_DTYPES.items()})
 		table.set_index(["name", "code"], inplace=True)
 		return table
+
+
+def write_row_to_outputs_table(row: dict[str, Any]) -> None:
+	""" load the input table, edit an existing row or add a new one, and save the updated version. """
+	if "name" not in row or "code" not in row:
+		raise KeyError("both 'name' and 'code' must be present in any row you want to add to the outputs table.")
+	for key in row.keys():
+		if key not in OUTPUT_DTYPES.keys():
+			raise KeyError(f"the row you're appending to the outputs table has a '{key}', which is not a collum of the outputs table.")
+	row = row.copy()
+
+	# extract the index from the rest of the data
+	label = (row["name"], row["code"])
+	row.pop("name")
+	row.pop("code")
+
+	table = load_outputs_table()
+
+	# load in any existing values, if there are any (but overwrite with new data when applicable)
+	if label in table.index:
+		row = {**table.loc[label], **row}
+		# and remove that existing row from the table
+		table.drop(label, inplace=True)
+
+	# append it to the table (I'm so mad they deprecated .append and now I have to do this garbage)
+	row = DataFrame(index=[label], data=[row])
+	table = concat([table, row])
+
+	# sort the table before saving it
+	table.sort_values(by=["name", "code"], inplace=True)
+	table.to_csv("run_outputs.csv", float_format="%.6g", date_format="%Y-%m-%d %H:%M:%S")
 
 
 def log_message(message: str) -> None:

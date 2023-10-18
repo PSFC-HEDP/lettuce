@@ -3,10 +3,12 @@ import shutil
 
 import numpy as np
 import numpy.testing as npt
+import pytest
+from pandas import isnull
 
 from python.data_io import load_pulse_shape, \
 	parse_gas_components, load_inputs_table, load_outputs_table, log_message, \
-	fill_in_template
+	fill_in_template, write_row_to_outputs_table
 
 
 def test_load_inputs_table():
@@ -19,6 +21,22 @@ def test_load_inputs_table():
 def test_load_outputs_table():
 	outputs_table = load_outputs_table()
 	assert outputs_table["yield"].dtype == float
+
+
+def test_write_row_to_ouputs_table():
+	with pytest.raises(KeyError):
+		write_row_to_outputs_table({"yield": 4e17})
+	with pytest.raises(KeyError):
+		write_row_to_outputs_table({"name": "test", "code": "LETTUCE",
+		                            "x": 0, "y": 2})
+	write_row_to_outputs_table({"name": "test", "code": "LETTUCE",
+	                            "yield": 4e17})
+	assert load_outputs_table().loc[("test", "LETTUCE"), "yield"] == 4e17
+	assert isnull(load_outputs_table().loc[("test", "LETTUCE"), "bang-time"])
+	write_row_to_outputs_table({"name": "test", "code": "LETTUCE",
+	                            "yield": 8e17, "bang-time": 1.5})
+	assert load_outputs_table().loc[("test", "LETTUCE"), "yield"] == 8e17
+	assert load_outputs_table().loc[("test", "LETTUCE"), "bang-time"] == 1.5
 
 
 def test_log_message():

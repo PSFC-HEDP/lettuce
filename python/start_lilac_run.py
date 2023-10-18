@@ -10,7 +10,7 @@ from pandas import Series, Timestamp, concat, notnull
 
 from python.material import Material, get_solid_material_from_name, get_gas_material_from_components
 from python.data_io import load_pulse_shape, parse_gas_components, load_beam_profile, load_inputs_table, \
-	load_outputs_table, log_message, fill_in_template
+	load_outputs_table, log_message, fill_in_template, write_row_to_outputs_table
 
 
 def start_lilac_run(name: str, force: bool) -> None:
@@ -86,14 +86,13 @@ def start_lilac_run(name: str, force: bool) -> None:
 	slurm_ID = search(r"batch job ([0-9]+)", submission.stdout).group(1)
 
 	# update our records
-	if (name, "LILAC") not in outputs_table.index:
-		outputs = Series(
-			name=(name, "LILAC"), data={
-				"status":          "pending",
-				"status changed":  Timestamp.now(),
-				"slurm ID":        slurm_ID})
-		outputs_table = concat([outputs_table, outputs.to_frame().T])
-	outputs_table.to_csv("run_outputs.csv")
+	write_row_to_outputs_table({
+		"name": name,
+		"code": "LILAC",
+		"status": "pending",
+		"status changed": Timestamp.now(),
+		"slurm ID": slurm_ID,
+	})
 	log_message(f"LILAC run '{name}' (slurm ID {slurm_ID}) is submitted to slurm.")
 
 
