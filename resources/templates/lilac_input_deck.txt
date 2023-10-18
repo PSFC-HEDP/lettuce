@@ -46,7 +46,7 @@
     idiagn = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  ! no diagnostics
     sbs_diag = .true.,  ! yes sbs diagnostic output
     tpd_diag = .true.,  ! yes TPD diagnostic output
-    ippost(13) = 3,  ! both LPF and HDF5 outputs
+    ippost(13) = 2,  ! output as HDF5
 /
 
 ! PARAMETERS FOR LAYER 0: FILL
