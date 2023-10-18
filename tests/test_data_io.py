@@ -30,7 +30,7 @@ def test_write_row_to_ouputs_table():
 		write_row_to_outputs_table({"name": "test", "code": "LETTUCE",
 		                            "x": 0, "y": 2})
 	write_row_to_outputs_table({"name": "test", "code": "LETTUCE",
-	                            "yield": 4e17})
+	                            "yield": 4e17}, drop_previous_data=True)
 	assert load_outputs_table().loc[("test", "LETTUCE"), "yield"] == 4e17
 	assert isnull(load_outputs_table().loc[("test", "LETTUCE"), "bang-time"])
 	write_row_to_outputs_table({"name": "test", "code": "LETTUCE",

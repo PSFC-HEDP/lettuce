@@ -6,7 +6,7 @@ from typing import Optional, Any
 import numpy as np
 from numpy import isfinite
 from numpy.typing import NDArray
-from pandas import read_csv, DataFrame, Series, concat, Timestamp
+from pandas import read_csv, DataFrame, Series, concat
 
 INPUT_DTYPES = {
 	"name": str,
@@ -41,7 +41,7 @@ def load_outputs_table() -> DataFrame:
 		return table
 
 
-def write_row_to_outputs_table(row: dict[str, Any]) -> None:
+def write_row_to_outputs_table(row: dict[str, Any], drop_previous_data=False) -> None:
 	""" load the input table, edit an existing row or add a new one, and save the updated version. """
 	if "name" not in row or "code" not in row:
 		raise KeyError("both 'name' and 'code' must be present in any row you want to add to the outputs table.")
@@ -57,9 +57,11 @@ def write_row_to_outputs_table(row: dict[str, Any]) -> None:
 
 	table = load_outputs_table()
 
-	# load in any existing values, if there are any (but overwrite with new data when applicable)
+	# if this row is already present in the table
 	if label in table.index:
-		row = {**table.loc[label], **row}
+		if not drop_previous_data:
+			# load in any existing values (but overwrite with new data when applicable)
+			row = {**table.loc[label], **row}
 		# and remove that existing row from the table
 		table.drop(label, inplace=True)
 
