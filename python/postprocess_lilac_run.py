@@ -274,9 +274,10 @@ def postprocess_lilac_run(name: str) -> None:
 	pdf.write(15, f"{name} LILAC summary")
 	pdf.ln()
 	# list the layers
-	pdf.set_font("Noto", "", 16)
-	pdf.write(12, f"Capsule composition (outer radius {interface_position[-1, 0]:.1f} μm)")
+	pdf.set_font("Noto", "B", 16)
+	pdf.write(10, f"Capsule composition (outer radius {interface_position[-1, 0]:.1f} μm)")
 	pdf.ln()
+	pdf.set_font("Noto", "", 16)
 	for layer in reversed(layers):
 		component_descriptions = []
 		for i in range(layer.component_abundances.size):
@@ -286,7 +287,7 @@ def postprocess_lilac_run(name: str) -> None:
 				f"{layer.component_abundances[i]:.1%} {nuclide_symbol(layer.atomic_numbers[i], layer.mass_numbers[i])}")
 		layer_description = f"{layer.name}: {layer.thickness:.1f} μm {layer.material_name} (#{layer.material_code}; {' + '.join(component_descriptions)})"
 		pdf.set_x(25)
-		pdf.write(12, layer_description)
+		pdf.write(10, layer_description)
 		pdf.ln()
 	# include the plots
 	pdf.image(f"{directory}/time_plot.png", 10, 80, 140, 120)
@@ -305,14 +306,14 @@ def postprocess_lilac_run(name: str) -> None:
 	pdf.add_page()
 	for weighting in list(reactions) + ["ko-d"] + list(brightness.keys()) + ["stopping"]:
 		if weighting not in total_yield or total_yield[weighting] > 0:
-			pdf.set_font("Noto", "B", 20)
-			pdf.write(12, f"{weighting} averaged quantities")
+			pdf.set_font("Noto", "B", 16)
+			pdf.write(10, f"{weighting} averaged quantities")
 			pdf.ln()
 			pdf.set_font("Noto", "", 16)
 			for label, values, foremat, units in averaged_quantities:
 				if weighting in values:
 					pdf.write(
-						12, f"{label}: {format(values[weighting], foremat)} {units}")
+						10, f"{label}: {format(values[weighting], foremat)} {units}")
 					pdf.ln()
 			pdf.ln()
 	# save it!
