@@ -43,12 +43,19 @@ but I'm just not about that life, you know?
 
 ## Installation
 
-I actually don't think you need to do anything.  If you're running locally you can
+The only dependencies are on PyPI.
+If you're running on Bluehive, you should make sure you have all of the dependencies installed on the relevant module.
+Right now I'm working on `anaconda3/2023.07-2`, so that would look like this:
+~~~bash
+module load anaconda3/2023.07-2
+python3 -m pip install -r requirements.txt
+~~~~
+It will probably say something about user installation because normal site-packages is not writeable.
+
+If you're running locally you only need to do the twoth line.
 ~~~bash
 pip install -r requirements.txt
 ~~~
-if you want, but most of these files require Slurm,
-and if you have Slurm you're presumably on the cluster where all of this is already installed.
 
 ## Recommended workflow
 
