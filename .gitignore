@@ -11,5 +11,8 @@
 # compiled python
 *.pyc
 
+# font cache
+resources/fonts/*.pkl
+
 # IntelliJ IDEA files
 /.idea/*
