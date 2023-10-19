@@ -13,7 +13,7 @@ from material import nuclide_symbol
 from python.data_io import write_row_to_outputs_table
 from python.utilities import apparent_brightness, width, gradient
 
-plt.rcParams["font.size"] = 12
+plt.rcParams["font.size"] = 11
 
 
 def postprocess_lilac_run(name: str) -> None:
@@ -189,8 +189,9 @@ def postprocess_lilac_run(name: str) -> None:
 
 	# plot the spacio-temporally resolved ion temperature and shell trajectory
 	print("generating default plots...")
+	mm = 1/25.4
 	fig, (ax_top_left, ax_bottom) = plt.subplots(
-		2, 1, sharex="all", gridspec_kw=dict(hspace=0, height_ratios=[2, 3]), figsize=(7, 6), facecolor="none")
+		2, 1, sharex="all", gridspec_kw=dict(hspace=0, height_ratios=[2, 3]), figsize=(140*mm, 120*mm), facecolor="none")
 	ax_top_rite = ax_top_left.twinx()
 	ax_bottom.set_facecolor("k")
 	mesh = ax_bottom.pcolormesh(node_time, node_position, intertime_ion_temperature,
@@ -200,8 +201,8 @@ def postprocess_lilac_run(name: str) -> None:
 	ax_bottom.set_xlim(0, min(np.max(time), bang_time["all fusion"] + 1))
 	ax_bottom.set_ylim(0, 1.2*interface_position[-1, 0])
 	ax_bottom.set_xlabel(f"Time (ns)")
-	ax_bottom.set_ylabel(f"Position (μm)")
-	fig.colorbar(mesh, ax=ax_bottom, orientation="horizontal", pad=.18,
+	ax_bottom.set_ylabel(f"Radius (μm)")
+	fig.colorbar(mesh, ax=ax_bottom, orientation="horizontal", pad=.25,
 	             label=f"Ion temperature (keV)")
 
 	# plot the pulse shape and burn history
@@ -231,7 +232,7 @@ def postprocess_lilac_run(name: str) -> None:
 
 	# plot the density and temperature profiles
 	fig, (ax_top, ax_T) = plt.subplots(
-		2, 1, sharex="all", gridspec_kw=dict(hspace=0), figsize=(7, 5), facecolor="none")
+		2, 1, sharex="all", gridspec_kw=dict(hspace=0), figsize=(140*mm, 100*mm), facecolor="none")
 	i = bang_index["all fusion"]
 	ax_T.plot(zone_position[:, i], Te[:, i], "C1--")
 	ax_T.set_ylabel("$T_\\mathrm{e}$ (keV)")
