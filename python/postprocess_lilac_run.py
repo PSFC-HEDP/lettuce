@@ -106,9 +106,9 @@ def postprocess_lilac_run(name: str) -> None:
 		ion_temperature = solution["zone/ion_temperature"][:, :]  # (keV)
 		intertime_ion_temperature = (ion_temperature[:, 1:] + ion_temperature[:, 0:-1])/2
 
-		electron_temperature = solution["zone/electron_temperature"][:, :]  # (keV)
-		electron_density = solution["zone/electron_density"][:, :]  # (cm^-3)
-		ionization = solution["zone/average_z"][:, :]
+		electron_temperature = solution["zone/electron_temperature"][:, :].astype(float64)  # (keV)
+		electron_density = solution["zone/electron_density"][:, :].astype(float64)  # (cm^-3)
+		ionization = solution["zone/average_z"][:, :].astype(float64)
 
 		# calculate brems emission to use as a weighting thing
 		filter_stacks = [
@@ -225,7 +225,7 @@ def postprocess_lilac_run(name: str) -> None:
 	ax_top_rite.set_ylim(peak*1.5e-4, peak*1.5)
 	ax_top_rite.set_ylabel("Yield (ns^-1)")
 	ax_top_rite.grid()
-	ax_top_rite.legend(curves, labels)
+	ax_top_rite.legend(curves, labels, framealpha=1, fancybox=False)
 	fig.tight_layout()
 	fig.savefig(f"{directory}/time_plot.eps")
 	fig.savefig(f"{directory}/time_plot.png", dpi=150)
@@ -249,7 +249,7 @@ def postprocess_lilac_run(name: str) -> None:
 	# plot the coupling and degeneracy parameters
 	ax_top.plot(zone_position[:, i], coupling[:, i], "C0-.", label="Γ")
 	ax_top.plot(zone_position[:, i], degeneracy[:, i], "C2--", label="ϴ")
-	ax_top.legend()
+	ax_top.legend(framealpha=1, fancybox=False)
 	ax_top.set_xlabel("Radius (μm)")
 	peak_mass_density = np.max(mass_density[:, i])
 	shell_radius = node_position[nonzero(mass_density[:, i] > peak_mass_density/20)[0][-1], i]
@@ -300,18 +300,19 @@ def postprocess_lilac_run(name: str) -> None:
 		("Degeneracy", average_degeneracy, ".3g", ""),
 		("ρR", average_areal_density, ".1f", "mg/cm^2"),
 	]
-	for weighting in list(reactions) + list(brightness.keys()) + ["stopping"]:
-		pdf.add_page()
-		pdf.set_font("Noto", "B", 20)
-		pdf.write(12, f"{weighting} averaged quantities")
-		pdf.ln()
-		pdf.set_font("Noto", "", 16)
-		for label, values, foremat, units in averaged_quantities:
-			if weighting in values:
-				pdf.write(
-					12, f"{label}: {format(values[weighting], foremat)} {units}")
-				pdf.ln()
-		pdf.ln()
+	pdf.add_page()
+	for weighting in list(reactions) + ["ko-d"] + list(brightness.keys()) + ["stopping"]:
+		if weighting not in total_yield or total_yield[weighting] > 0:
+			pdf.set_font("Noto", "B", 20)
+			pdf.write(12, f"{weighting} averaged quantities")
+			pdf.ln()
+			pdf.set_font("Noto", "", 16)
+			for label, values, foremat, units in averaged_quantities:
+				if weighting in values:
+					pdf.write(
+						12, f"{label}: {format(values[weighting], foremat)} {units}")
+					pdf.ln()
+			pdf.ln()
 	# save it!
 	pdf.output(f"{directory}/summary.pdf")
 
