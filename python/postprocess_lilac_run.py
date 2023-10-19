@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt, colors
 from numpy import stack, tile, diff, cumsum, float64, nonzero, pi, average, exp, log
 from numpy.typing import NDArray
 from pandas import Timestamp
+from scipy import integrate
 
 from material import nuclide_symbol
 from python.data_io import write_row_to_outputs_table
@@ -88,8 +89,9 @@ def postprocess_lilac_run(name: str) -> None:
 		# also calculate knock-on deuteron yield
 		deuterium_areal_density = np.sum(
 			solution["zone/deuteron_density"]*diff(node_position, axis=0), axis=0)*1e-4  # deuteron/cm^2
-		knockon_cross_section = .100e-24  # cm^2
-		total_yield_rate["ko-d"] = total_yield_rate["DT-n"]*deuterium_areal_density*knockon_cross_section  # deuteron/ns
+		knockon_cross_section = .100e-24  # cm^2 (see C. K. Li and al., Phys. Plasmas 8 (2001) 4902)
+		total_yield_rate["ko-d"] = total_yield_rate["DT-n"]*knockon_cross_section*deuterium_areal_density*1.1  # deuteron/ns
+		total_yield["ko-d"] = integrate.trapezoid(time, total_yield_rate["ko-d"])
 
 		total_yield_rate["all charged particles"] = total_yield_rate["D3He-p"] + total_yield_rate["ko-d"]
 
