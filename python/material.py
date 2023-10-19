@@ -80,6 +80,19 @@ class Material:
 		       f"pressure={self.pressure!r})"
 
 
+# list of atomic symbols
+ATOMIC_SYMBOLS = [
+	"n", "H", "He",
+	"Li", "Be", "B", "C", "N", "O", "F", "Ne",
+	"Na", "Mg", "Al", "Si", "P", "S", "Cl", "Ar",
+	"K", "Ca", "Sc", "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn", "Ga", "Ge", "As", "Se", "Br", "Kr",
+	"Rb", "Sr", "Y", "Zr", "Nb", "Mo", "Tc", "Ru", "Rh", "Pd", "Ag", "Cd", "In", "Sn", "Sb", "Te", "I", "Xe",
+	"Cs", "Ba", "La", "Ce", "Pr", "Nd", "Pm", "Sm", "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm", "Yb",
+	"Lu", "Hf", "Ta", "W", "Re", "Os", "Ir", "Pt", "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra",
+	"Ac", "Th", "Pa", "U", "Np", "Pu", "Am", "Cm", "Bk", "Cf"]
+
+
+# how to specify various common solids in LILAC
 # see the [LILAC material table](https://lle-prod-gitlab.lle.rochester.edu/lilac/lilac/-/wikis/material-table) for more information.
 LILAC_SOLID_MATERIALS = {
 	"H": Material(102, eos=8, ionization=1, opacity=8, protium_fraction=1.0),
@@ -103,6 +116,7 @@ LILAC_SOLID_MATERIALS = {
 	"polystyrene": Material(510, eos=8, ionization=1, opacity=8),
 }
 
+# how to specify various common gases in LILAC
 LILAC_GAS_MATERIALS = {
 	"D": Material(101, eos=8, ionization=1, opacity=8),
 	"He": Material(2, eos=6, ionization=2, opacity=1),
@@ -113,6 +127,7 @@ LILAC_GAS_MATERIALS = {
 	"air": Material(300, eos=4, ionization=1, opacity=1),
 }
 
+# material codes that correspond to mixtures of D3He
 LILAC_D3He_MIXTURES = {
 	103: 1.00000, 289: 0.99000, 278: 0.92308, 292: 0.90000,
 	280: 0.87500, 298: 0.80000, 291: 0.70000, 297: 0.66667,
@@ -121,6 +136,16 @@ LILAC_D3He_MIXTURES = {
 	284: 0.20000, 282: 0.15000, 286: 0.11111, 287: 0.10000,
 	285: 0.07692, 277: 0.02500, 299: 0.00990, 101: 0.00000,
 }
+
+
+def nuclide_symbol(atomic_number: int, mass_number: int) -> str:
+	""" succinctly describe this particular nuclide """
+	if atomic_number == 1 and mass_number == 2:
+		return "D"
+	elif atomic_number == 1 and mass_number == 3:
+		return "T"
+	else:
+		return f"{mass_number:d} {ATOMIC_SYMBOLS[atomic_number]}"
 
 
 def find_best_D3He_material_code(fHe: float) -> tuple[int, float]:
