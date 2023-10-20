@@ -17,7 +17,7 @@ from python.utilities import apparent_brightness, width, gradient
 plt.rcParams["font.size"] = 11
 
 
-def postprocess_lilac_run(name: str) -> None:
+def postprocess_lilac_run(name: str, status: str) -> None:
 	""" read the raw results of a successful LILAC simulation and compile them into a human-readable
 	    PDF.  also save some key numbers like yield and burn-average ρR to run_outputs.csv.
 	"""
@@ -368,6 +368,9 @@ if __name__ == "__main__":
 	parser.add_argument(
 		"name", type=str,
 		help="the name of the run, as specified in run_inputs.csv")
+	parser.add_argument(
+		"--status", type=str, default="completed",
+		help="the end state of the run; one of 'completed', 'failed', or 'timeout'")
 	args = parser.parse_args()
 
-	postprocess_lilac_run(args.name)
+	postprocess_lilac_run(args.name, args.status)
