@@ -254,7 +254,10 @@ def postprocess_lilac_run(name: str) -> None:
 	ax_top.legend(framealpha=1, fancybox=False)
 	ax_top.set_xlabel("Radius (μm)")
 	peak_mass_density = np.max(mass_density[:, i])
-	shell_radius = node_position[nonzero(mass_density[:, i] > peak_mass_density/20)[0][-1], i]
+	outer_index = min(
+		node_position.shape[0] - 1,
+		nonzero(mass_density[:, i] > peak_mass_density/20)[0][-1] + 1)
+	shell_radius = node_position[outer_index, i]
 	ax_top.set_xlim(0, shell_radius)
 	ax_top.set_yscale("log")
 	ax_top.set_ylim(1e-2, 1e+2)
@@ -285,7 +288,7 @@ def postprocess_lilac_run(name: str) -> None:
 				break
 			component_descriptions.append(
 				f"{layer.component_abundances[i]:.1%} {nuclide_symbol(layer.atomic_numbers[i], layer.mass_numbers[i])}")
-		layer_description = f"{layer.name}: {layer.thickness:.1f} μm {layer.material_name} (#{layer.material_code}; {' + '.join(component_descriptions)})"
+		layer_description = f"{layer.name}: {layer.thickness:.1f} μm {layer.material_name} ({' + '.join(component_descriptions)})"
 		pdf.set_x(25)
 		pdf.write(10, layer_description)
 		pdf.ln()
