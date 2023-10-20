@@ -11,6 +11,7 @@ from pandas import Series, Timestamp, notnull
 from python.data_io import load_pulse_shape, parse_gas_components, load_beam_profile, load_inputs_table, \
 	load_outputs_table, log_message, fill_in_template, write_row_to_outputs_table
 from python.material import Material, get_solid_material_from_name, get_gas_material_from_components
+from python.utilities import degrade_laser_pulse
 
 
 def start_lilac_run(name: str, force: bool) -> None:
