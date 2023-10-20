@@ -7,7 +7,7 @@ from python.material import find_best_D3He_material_code, get_solid_material_fro
 
 def test_nuclide_symbol():
 	assert nuclide_symbol(1, 3) == "T"
-	assert nuclide_symbol(6, 12) == "12 C"
+	assert nuclide_symbol(6, 12) == "¹²C"
 
 
 def test_find_best_D3He_code():

@@ -3,7 +3,7 @@ import numpy.testing as npt
 import pytest
 from numpy import array, concatenate, inf
 
-from python.utilities import gradient, width, apparent_brightness, degrade_laser_pulse
+from python.utilities import gradient, width, apparent_brightness, degrade_laser_pulse, to_superscript
 
 
 def test_degrade_laser_pulse():
@@ -13,6 +13,12 @@ def test_degrade_laser_pulse():
 	                 array([0., 1., 1., 0., 0.]))
 	npt.assert_equal(degrade_laser_pulse(array([0., 1., 1., 2., 0.]), 1.0),
 	                 array([0., 0., 0., 0., 0.]))
+
+
+def test_to_superscript():
+	assert to_superscript("321") == "³²¹"
+	with pytest.raises(KeyError):
+		to_superscript("a")
 
 
 def test_gradient():
