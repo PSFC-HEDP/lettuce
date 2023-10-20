@@ -1,10 +1,18 @@
 import numpy as np
 from matplotlib import pyplot as plt
-from numpy import expand_dims, geomspace, arange, interp, exp, sqrt, isfinite, inf
+from numpy import expand_dims, geomspace, arange, interp, exp, sqrt, isfinite, inf, cumsum, where
 from numpy.typing import NDArray
 from scipy import integrate
 
 from python import image_plate
+
+
+def degrade_laser_pulse(original_pulse: NDArray[float], factor: float) -> NDArray[float]:
+	""" take a laser pulse and reduce its energy by the given factor by setting stuff at the end to zero. """
+	time = arange(original_pulse.size)
+	energy_integral = cumsum(original_pulse)/np.sum(original_pulse)
+	cutoff_index = interp(1 - factor, energy_integral, time)
+	return where(time <= cutoff_index, original_pulse, 0)
 
 
 def gradient(y: NDArray[float], x: NDArray[float], **kwargs):
