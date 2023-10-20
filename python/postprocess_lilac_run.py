@@ -112,16 +112,10 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 		ionization = solution["zone/average_z"][:, :].astype(float64)
 
 		# calculate brems emission to use as a weighting thing
-		filter_stacks = [
-			[(50, "Al")],
-			[(50, "Al"), (1, "SRIP"), (200, "Al")]
-		]
 		brightness = {}
-		for filter_stack in filter_stacks:
-			filter_stack_name = " " .join(
-				f"{thickness:.0f}μm {material} x-ray" for thickness, material in filter_stack)
-			brightness[filter_stack_name] = apparent_brightness(
-				ionization, electron_density, electron_temperature, filter_stack)
+		for cutoff in [2., 10., 50.]:  # (keV)
+			brightness[f"{cutoff:.0f}+ keV x-ray"] = apparent_brightness(
+				ionization, electron_density, electron_temperature, cutoff)
 
 		# calculate coupling and degeneracy parameters
 		ne = electron_density*centimeter**-3
@@ -293,7 +287,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 				break
 			component_descriptions.append(
 				f"{layer.component_abundances[i]:.1%} {nuclide_symbol(layer.atomic_numbers[i], layer.mass_numbers[i])}")
-		layer_description = f"{layer.name}: {layer.thickness:.1f} μm {layer.material_name} ({' + '.join(component_descriptions)}) at {layer.density:.2g} g/cm^3"
+		layer_description = f"{layer.name}: {layer.thickness:.1f} μm {layer.material_name} ({' + '.join(component_descriptions)}) at {layer.density:.2g} g/cm³"
 		pdf.set_x(25)
 		pdf.write(10, layer_description)
 		pdf.ln()
@@ -313,10 +307,10 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 		("ρR", average_areal_density, ".1f", "mg/cm^2"),
 	]
 	pdf.add_page()
-	for weighting in list(reactions) + ["ko-d"] + list(brightness.keys()) + ["stopping"]:
+	for weighting in list(reactions) + ["ko-d", "stopping"] + list(brightness.keys()):
 		if weighting not in total_yield or total_yield[weighting] > 0:
 			pdf.set_font("Noto", "B", 16)
-			pdf.write(10, f"{weighting} averaged quantities")
+			pdf.write(10, f"{weighting} quantities")
 			pdf.ln()
 			pdf.set_font("Noto", "", 16)
 			for label, values, foremat, units in averaged_quantities:

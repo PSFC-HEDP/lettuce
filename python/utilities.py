@@ -4,8 +4,6 @@ from numpy import expand_dims, geomspace, arange, interp, exp, sqrt, isfinite, i
 from numpy.typing import NDArray
 from scipy import integrate
 
-from python import image_plate
-
 
 def degrade_laser_pulse(original_pulse: NDArray[float], factor: float) -> NDArray[float]:
 	""" take a laser pulse and reduce its energy by the given factor by setting stuff at the end to zero. """
@@ -64,22 +62,18 @@ def width(x: NDArray[float], y: NDArray[float]):
 
 
 def apparent_brightness(ionization: NDArray[float], electron_number_density: NDArray[float],
-                        electron_temperature: NDArray[float], filter_stack=None, show_plot=False
+                        electron_temperature: NDArray[float], energy_cutoff: float, show_plot=False
                         ) -> NDArray[float]:
 	""" how much of the emission would be detected by an image plate
 		:param ionization: the spatio-temporally resolved average ion charge
 		:param electron_number_density: the spacio-temporally resolved electron number density (cm^-3)
 		:param electron_temperature: the spacio-temporally resolved electron temperature (keV)
-		:param filter_stack: the filter specifications as (thickness (μm), material name)
+		:param energy_cutoff: x-ray energies will be integrated from this to positive infinity
 		:param show_plot: whether to plot and show a spectrum before returning
 		:return: the spacio-temporally resolved
 	"""
-	if filter_stack is None:
-		filter_stack = []
-
 	# account for sensitivity and transmission
 	hν = expand_dims(geomspace(1e0, 1e3, 61), axis=tuple(1 + arange(ionization.ndim)))  # (keV)
-	log_sensitivity = image_plate.log_xray_sensitivity(hν, filter_stack)
 
 	# catch arithmetic errors before they happen
 	if not np.all(isfinite(ionization) & (ionization > 0)):
@@ -94,8 +88,7 @@ def apparent_brightness(ionization: NDArray[float], electron_number_density: NDA
 	ne = electron_number_density
 	ni = ne/Z
 	Te = electron_temperature
-	log_emission = -hν/Te
-	emission = Z*ni*ne/sqrt(Te)*exp(log_emission + log_sensitivity)
+	emission = Z*ni*ne/sqrt(Te)*exp(-hν/Te)
 
 	# plot the curve for my benefit
 	if show_plot:
@@ -106,4 +99,5 @@ def apparent_brightness(ionization: NDArray[float], electron_number_density: NDA
 		plt.show()
 
 	# finally, integrate over energy
-	return integrate.trapz(x=hν, y=emission, axis=0)
+	return integrate.trapezoid(
+		x=hν, y=where(hν > energy_cutoff, emission, 0), axis=0)
