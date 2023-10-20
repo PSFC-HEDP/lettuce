@@ -131,10 +131,10 @@ LILAC_GAS_MATERIALS = {
 LILAC_D3He_MIXTURES = {
 	103: 1.00000, 289: 0.99000, 278: 0.92308, 292: 0.90000,
 	280: 0.87500, 298: 0.80000, 291: 0.70000, 297: 0.66667,
-	296: 0.60000, 295: 0.50000, 270: 0.45000, 283: 0.42857,
-	288: 0.40000, 290: 0.33333, 279: 0.28571, 281: 0.28000,
-	284: 0.20000, 282: 0.15000, 286: 0.11111, 287: 0.10000,
-	285: 0.07692, 277: 0.02500, 299: 0.00990, 101: 0.00000,
+	296: 0.60000, 295: 0.50000, 283: 0.42857, 288: 0.40000,
+	290: 0.33333, 279: 0.28571, 281: 0.28000, 284: 0.20000,
+	282: 0.15000, 286: 0.11111, 287: 0.10000, 285: 0.07692,
+	277: 0.02500, 299: 0.00990, 101: 0.00000,
 }
 
 
@@ -206,7 +206,7 @@ def get_gas_material_from_components(partial_pressures: dict[str, float]) -> Mat
 	if sum(atomic_fractions[nuclide] for nuclide in ["H", "D", "T"]) > .9:
 		print("ignoring anything in the gas other than H, D, and T")
 		# we can use bilt-in gas #101 and control ratios using ptrit
-		# TODO: if you ever implement mixing, material -101 should use opacity table "opacity_tables/HDT_plt_50x50Dt_101.prp"
+		# TODO: if you ever implement mixing, material -101 should use opacity table "/lle/data/opacity_tables/HDT_plt_50x50Dt_101.prp"
 		material = copy(LILAC_GAS_MATERIALS["D"])
 		material.protium_fraction = atomic_fractions["H"]
 		material.tritium_fraction = atomic_fractions["T"]
