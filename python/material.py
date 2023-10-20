@@ -4,6 +4,8 @@ from copy import copy
 from collections import defaultdict
 from typing import Optional, Union
 
+from python.utilities import to_superscript
+
 
 class Material:
 	def __init__(
@@ -146,7 +148,7 @@ def nuclide_symbol(atomic_number: int, mass_number: int) -> str:
 	elif atomic_number == 1 and mass_number == 3:
 		return "T"
 	else:
-		return f"{mass_number:d} {ATOMIC_SYMBOLS[atomic_number]}"
+		return to_superscript(str(mass_number)) + ATOMIC_SYMBOLS[atomic_number]
 
 
 def find_best_D3He_material_code(fHe: float) -> tuple[int, float]:

@@ -15,6 +15,15 @@ def degrade_laser_pulse(original_pulse: NDArray[float], factor: float) -> NDArra
 	return where(time <= cutoff_index, original_pulse, 0)
 
 
+def to_superscript(string: str) -> str:
+	""" convert a string to use the special unicode superscript letters """
+	superscript = {
+		"0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴",
+		"5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹",
+	}
+	return "".join(superscript[character] for character in string)
+
+
 def gradient(y: NDArray[float], x: NDArray[float], **kwargs):
 	""" it's numpy.gradient but it fixes the roundoff errors you get with inequal steps """
 	# find indices where there is exactly zero change
