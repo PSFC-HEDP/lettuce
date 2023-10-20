@@ -36,15 +36,22 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 
 		# get the compositions of the different layers
 		mass_density = solution["zone/mass_density"][:, :]  # (g/cm^3)
-		layer_names = ["Fill", "Shell", "Coating", "wtf is this"]
 		layers = []
 		for i in range(num_layers):
 			if i == 0:
 				thickness = interface_position[i, 0]
 			else:
 				thickness = interface_position[i, 0] - interface_position[i - 1, 0]
+			if solution["target/material_id"][i] == 13:
+				layer_name = "Coating"
+			elif solution["target/material_id"][i] == 102:
+				layer_name = "Ice"
+			elif mass_density[interface_indices[i] - 1, 0] < .1:
+				layer_name = "Fill"
+			else:
+				layer_name = "Shell"
 			layers.append(Layer(
-				layer_names[i],
+				layer_name,
 				thickness,
 				solution["target/material_name"][i].decode(),
 				mass_density[interface_indices[i] - 1, 0],
