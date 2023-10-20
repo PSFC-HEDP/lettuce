@@ -122,8 +122,8 @@ The columns are as follows:
   The ratio between the laser energy absorbed by the capsule and the total laser energy.
 - **flux limiter**  
   The optional free-streaming electron sharp-cutoff flux limiter coefficient.  Units unknown.  Setting it to 0 will use Valeri Goncharov's nonlocal model instead.
-- **laser degradation** (TODO)  
-  If this is given and nonzero, the laser pulse will be cut short by this many picoseconds.  This is primarily used for matching simulated yields to experimental ones.
+- **laser degradation**  
+  If this is given and nonzero, the laser pulse will be cut short by this factor.  Inputting 1 will completely turn off the laser.  This is primarily used for matching simulated yields to experimental ones.
 - **density multiplier**  
   The optional factor by which the shell density should differ from whatever it normally is for that material.  This can be used to match simulated ρRs to experimental ones.
 

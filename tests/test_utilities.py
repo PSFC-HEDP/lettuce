@@ -3,7 +3,16 @@ import numpy.testing as npt
 import pytest
 from numpy import array, concatenate, inf
 
-from python.utilities import gradient, width, apparent_brightness
+from python.utilities import gradient, width, apparent_brightness, degrade_laser_pulse
+
+
+def test_degrade_laser_pulse():
+	npt.assert_equal(degrade_laser_pulse(array([0., 1., 1., 2., 0.]), 0.0),
+	                 array([0., 1., 1., 2., 0.]))
+	npt.assert_equal(degrade_laser_pulse(array([0., 1., 1., 2., 0.]), 0.5),
+	                 array([0., 1., 1., 0., 0.]))
+	npt.assert_equal(degrade_laser_pulse(array([0., 1., 1., 2., 0.]), 1.0),
+	                 array([0., 0., 0., 0., 0.]))
 
 
 def test_gradient():

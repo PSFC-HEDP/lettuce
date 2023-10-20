@@ -6,11 +6,11 @@ from re import search
 from subprocess import run
 
 import numpy as np
-from pandas import Series, Timestamp, concat, notnull
+from pandas import Series, Timestamp, notnull
 
-from python.material import Material, get_solid_material_from_name, get_gas_material_from_components
 from python.data_io import load_pulse_shape, parse_gas_components, load_beam_profile, load_inputs_table, \
 	load_outputs_table, log_message, fill_in_template, write_row_to_outputs_table
+from python.material import Material, get_solid_material_from_name, get_gas_material_from_components
 
 
 def start_lilac_run(name: str, force: bool) -> None:
@@ -60,6 +60,9 @@ def start_lilac_run(name: str, force: bool) -> None:
 	except (IOError, ValueError) as e:
 		print(e)
 		return
+
+	if notnull(inputs["laser degradation"]):
+		pulse_power = degrade_laser_pulse(pulse_power, inputs["laser degradation"])
 
 	# parse the materials
 	shell_material = get_solid_material_from_name(inputs["shell material"])
