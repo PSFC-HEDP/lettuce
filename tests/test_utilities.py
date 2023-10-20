@@ -17,15 +17,15 @@ def test_degrade_laser_pulse():
 
 def test_gradient():
 	x = array([0., 1., 2.7, 3.6])
-	y = array([0., 0., -1., 2.])
+	y = array([1., 1., -0., 3.])
 	np_gradient_dydx = np.gradient(y, x)
 	npt.assert_equal(gradient(y, x), np_gradient_dydx)
 	x = array([-2., 0., 1., 2.7, 3.6])
-	y = array([0., 0., 0., -1., 2.])
+	y = array([1., 1., 1., 0., 3.])
 	np_gradient_dydx = np.gradient(y, x)
 	npt.assert_equal(gradient(y, x), concatenate([[0., 0.], np_gradient_dydx[2:]]))
 	x = array([-2., 0., 1., 2.7, 3.6])
-	y = array([2., -1., 0., 0., 0.])
+	y = array([3., 0., 1., 1., 1.])
 	np_gradient_dydx = np.gradient(y, x)
 	npt.assert_equal(gradient(y, x), concatenate([np_gradient_dydx[:-2], [0., 0.]]))
 
