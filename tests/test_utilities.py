@@ -59,20 +59,18 @@ def test_apparent_brightness():
 	Z = array(1.5)
 	ne = array(1e+20)
 	Te = array(3)
-	baseline = apparent_brightness(Z, ne, Te)
-	dense = apparent_brightness(Z, 2*ne, Te)
+	baseline = apparent_brightness(Z, ne, Te, 0)
+	dense = apparent_brightness(Z, 2*ne, Te, 0)
 	assert dense > baseline
-	empty = apparent_brightness(Z, 0*ne, Te)
+	empty = apparent_brightness(Z, 0*ne, Te, 0)
 	assert empty == 0
-	hot = apparent_brightness(Z, ne, 2*Te)
+	hot = apparent_brightness(Z, ne, 2*Te, 0)
 	assert hot > baseline
-	cold = apparent_brightness(Z, ne, 1e-20*Te)
+	cold = apparent_brightness(Z, ne, 1e-20*Te, 0)
 	assert cold == 0
-	unfiltered = apparent_brightness(Z, ne, Te, filter_stack=[(0., "Al"), (0., "Ta")])
-	assert unfiltered == baseline
-	filtered = apparent_brightness(Z, ne, Te, filter_stack=[(1, "SRIP")])
+	filtered = apparent_brightness(Z, ne, Te, 10)
 	assert filtered < baseline
 	with pytest.raises(ValueError):
-		apparent_brightness(0*Z, ne, Te)
+		apparent_brightness(0*Z, ne, Te, 0)
 	with pytest.raises(ValueError):
-		apparent_brightness(Z, ne, 0*Te)
+		apparent_brightness(Z, ne, 0*Te, 0)
