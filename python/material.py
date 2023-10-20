@@ -119,6 +119,7 @@ LILAC_SOLID_MATERIALS = {
 # how to specify various common gases in LILAC
 LILAC_GAS_MATERIALS = {
 	"D": Material(101, eos=8, ionization=1, opacity=8),
+	"DT": Material(101, eos=8, ionization=1, opacity=8, tritium_fraction=0.5),
 	"He": Material(2, eos=6, ionization=2, opacity=1),
 	"N": Material(7, eos=6, ionization=2, opacity=1),
 	"Ne": Material(10, eos=6, ionization=2, opacity=1),

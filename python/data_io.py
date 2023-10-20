@@ -182,7 +182,7 @@ def parse_gas_components(descriptor: str) -> dict[str, float]:
 	parts = descriptor.split("+")
 	components = {}
 	for part in parts:
-		reading = fullmatch(r"\s*([0-9.]+)(\s?atm)?\s*([0-9]*[A-Z][a-z]?)2?\s*", part)
+		reading = fullmatch(r"\s*([0-9.]+)(\s?atm)?\s*([0-9]*[A-Za-z]+)2?\s*", part)
 		if reading is None:
 			raise ValueError(f"cannot parse '{part}'")
 		pressure = float(reading.group(1))
