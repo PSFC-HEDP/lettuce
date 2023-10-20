@@ -214,7 +214,7 @@ def postprocess_lilac_run(name: str) -> None:
 		ax_top_left.plot(time, laser_power, "k--", zorder=2)[0])
 	labels.append("Laser")
 	for reaction in total_yield_rate.keys():
-		if reaction != "all fusion":
+		if not reaction.startswith("all "):
 			if np.any(total_yield_rate[reaction] > 0):
 				curves.append(
 					ax_top_rite.plot(time, total_yield_rate[reaction], zorder=3)[0])
