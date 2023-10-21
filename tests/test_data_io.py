@@ -1,6 +1,3 @@
-import os.path
-import shutil
-
 import numpy as np
 import numpy.testing as npt
 import pytest
@@ -12,8 +9,6 @@ from python.data_io import load_pulse_shape, \
 
 
 def test_load_inputs_table():
-	if not os.path.isfile("run_inputs.csv"):
-		shutil.copyfile("tests/run_inputs.csv", "run_inputs.csv")
 	inputs_table = load_inputs_table()
 	assert inputs_table["flux limiter"].dtype == float
 
