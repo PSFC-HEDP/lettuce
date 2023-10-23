@@ -41,6 +41,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 		print("processing LILAC output...")
 		num_layers = solution["target/material_name"].size
 		num_zones = solution["target/zone/atomic_mass"].size
+		thermal_transport_model = solution["target/tt_model"][()].decode()
 
 		# find the node and interface positions
 		node_position = solution["node/boundary_position"][:, :]  # (μm)
@@ -298,7 +299,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 	pdf.ln()
 	# list the layers
 	pdf.set_font("Noto", "B", 16)
-	pdf.write(10, f"Capsule composition (outer radius {interface_position[-1, 0]:.1f} μm)")
+	pdf.write(10, f"Capsule composition (outer diameter {2*interface_position[-1, 0]:.1f} μm)")
 	pdf.ln()
 	pdf.set_font("Noto", "", 16)
 	for layer in reversed(layers):
@@ -315,6 +316,19 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 	# include the plots
 	pdf.image(f"{directory}/time_plot.png", 10, 80, 140, 120)
 	pdf.image(f"{directory}/space_plot.png", 150, 80, 140, 100)
+	pdf.add_page()
+	# print out some general numbers
+	pdf.set_font("Noto", "B", 16)
+	pdf.write(10, f"Overview quantities")
+	pdf.ln()
+	pdf.set_font("Noto", "", 16)
+	pdf.write(10, f"Laser energy: {integrate.trapezoid(x=time, y=laser_power):.3f} kJ")
+	pdf.ln()
+	pdf.write(10, f"Convergence ratio: {convergence_ratio:.1f}")
+	pdf.ln()
+	pdf.write(10, f"Thermal transport: {thermal_transport_model:s}")
+	pdf.ln()
+	pdf.ln()
 	# make pages for varius burn-averaged quantities
 	averaged_quantities = [
 		("Yield", total_yield, ".3g", ""),
@@ -327,7 +341,6 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 		("Degeneracy", average_degeneracy, ".3g", ""),
 		("ρR", average_areal_density, ".1f", "mg/cm^2"),
 	]
-	pdf.add_page()
 	for weighting in list(reactions) + ["ko-d", "stopping"] + list(brightness.keys()):
 		if weighting not in total_yield or total_yield[weighting] > 0:
 			pdf.set_font("Noto", "B", 16)

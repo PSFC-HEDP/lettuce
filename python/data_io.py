@@ -68,7 +68,7 @@ def write_row_to_outputs_table(row: dict[str, Any], drop_previous_data=False) ->
 
 	# sort the table before saving it
 	table.sort_values(by="name", inplace=True)
-	table.to_csv("run_outputs.csv", float_format="%.6g", date_format="%Y-%m-%d %H:%M:%S")
+	table.to_csv("run_outputs.csv", float_format="%.4g", date_format="%Y-%m-%d %H:%M:%S")
 
 
 def log_message(message: str) -> None:
