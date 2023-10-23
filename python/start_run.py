@@ -1,5 +1,6 @@
 import os
 import shutil
+import sys
 from argparse import ArgumentParser
 from datetime import datetime
 from re import search, sub
@@ -14,37 +15,64 @@ from python.material import Material, get_solid_material_from_name, get_gas_mate
 from python.utilities import degrade_laser_pulse
 
 
-def start_lilac_run(name: str, force: bool) -> None:
-	""" arrange the inputs for a LILAC run in a machine-readable format and submit it to slurm
+def start_run(code: str, name: str, force: bool) -> None:
+	""" arrange the inputs for a LILAC or IRIS run in a machine-readable format and submit it to slurm
+	    :param code: one of "LILAC" or "IRIS"
 	    :param name: a string that will let us look up this run's inputs in the run_inputs.csv table
-	    :param force: whether to run this
+	    :param force: whether to run this even if another version of this run already exists TODO: let the user hit "y" so they don't have to redo the command
 	"""
-	# start by loading up the run input and output tables
-	inputs_table = load_inputs_table()
-	outputs_table = load_outputs_table()
+	if code == "LILAC":
+		# assess the current state of this run TODO: the outputs table needs to distinguish the LILAC state from the IRIS state, and warn you if you try to do IRIS without LILAC first
+		outputs_table = load_outputs_table()
+		if name not in outputs_table.index:
+			current_status = "new"
+		elif not os.path.isdir(f"runs/{name}/lilac"):
+			current_status = "new"
+		else:
+			current_status = outputs_table.loc[name, "status"]
+		# if it's already running and the user didn't force it, stop work immediately
+		if current_status in ["running", "completed", "pending"] and not force:
+			print(f"this run seems to already be {current_status}.  to overwrite it, use the --force "
+			      f"command line option.")
+			return
+		# if it's already running and the user did force it, cancel the run
+		elif current_status == "pending" or current_status == "running":
+			print(f"cancelling the current run...")
+			run(["scancel", outputs_table.loc[name, "slurm ID"]])
+		# if it's already run and the user did force it, clear the previous output
+		elif current_status == "completed":
+			print(f"overwriting the previous run...")
+			shutil.rmtree(f"runs/{name}/lilac")
 
-	# assess the current state of this run
-	if name not in outputs_table.index:
-		current_status = "new"
-	elif not os.path.isdir(f"runs/{name}/lilac"):
-		current_status = "new"
+	if code == "LILAC":
+		prepare_lilac_inputs(name)
+	elif code == "IRIS":
+		prepare_iris_inputs(name)
 	else:
-		current_status = outputs_table.loc[name, "status"]
-	# if it's already running and the user didn't force it, stop work immediately
-	if current_status in ["running", "completed", "pending"] and not force:
-		print(f"this run seems to already be {current_status}.  to overwrite it, use the --force "
-		      f"command line option.")
-		return
-	# if it's already running and the user did force it, cancel the run
-	elif current_status == "pending" or current_status == "running":
-		print(f"cancelling the current run...")
-		run(["scancel", outputs_table.loc[name, "slurm ID"]])
-	# if it's already run and the user did force it, clear the previous output
-	elif current_status == "completed":
-		print(f"overwriting the previous run...")
-		shutil.rmtree(f"runs/{name}/lilac")
+		raise ValueError(f"unrecognized code: '{code}'")
 
+	# finally, submit the slurm job
+	submission = run(["sbatch", f"runs/{name}/{code.lower()}/run.sh"],
+	                 check=True, capture_output=True, text=True)
+	slurm_ID = search(r"batch job ([0-9]+)", submission.stdout).group(1)
+
+	# update our records
+	write_row_to_outputs_table({
+		"name": name,
+		"status": "pending",
+		"status changed": Timestamp.now(),
+		"slurm ID": slurm_ID,
+	})
+	log_message(f"LILAC run '{name}' (slurm ID {slurm_ID}) is submitted to slurm.")
+
+
+def prepare_lilac_inputs(name: str) -> None:
+	""" load the LILAC input parameters from run_inputs.csv and save the pulse shape, beam profile,
+	    and input deck to the relevant directory.
+	"""
+	directory = f"runs/{name}/{code.lower()}"
 	# get the run inputs from the run input table
+	inputs_table = load_inputs_table()
 	try:
 		inputs = inputs_table.loc[name]
 	except KeyError:
@@ -74,29 +102,15 @@ def start_lilac_run(name: str, force: bool) -> None:
 	bash_script = build_lilac_bash_script(name)
 
 	# save all of the inputs and the script to the run directory
-	os.makedirs(f"runs/{name}/lilac", exist_ok=True)
-	with open(f"runs/{name}/lilac/lilac_data_input.txt", "w") as file:
+	os.makedirs(directory, exist_ok=True)
+	with open(f"{directory}/lilac_data_input.txt", "w") as file:
 		file.write(input_deck)
-	with open(f"runs/{name}/lilac/run_lilac.sh", "w") as file:
+	with open(f"{directory}/run.sh", "w") as file:
 		file.write(bash_script)
-	np.savetxt(f"runs/{name}/lilac/pulse_shape.txt",
+	np.savetxt(f"{directory}/pulse_shape.txt",
 	           np.stack([pulse_time, pulse_power], axis=1), delimiter=",")  # type: ignore
-	np.savetxt(f"runs/{name}/lilac/beam_profile.txt",
+	np.savetxt(f"{directory}/beam_profile.txt",
 	           np.stack([beam_radius, beam_intensity], axis=1), delimiter=" ")  # type: ignore
-
-	# finally, submit the slurm job
-	submission = run(["sbatch", f"runs/{name}/lilac/run_lilac.sh"],
-	                 check=True, capture_output=True, text=True)
-	slurm_ID = search(r"batch job ([0-9]+)", submission.stdout).group(1)
-
-	# update our records
-	write_row_to_outputs_table({
-		"name": name,
-		"status": "pending",
-		"status changed": Timestamp.now(),
-		"slurm ID": slurm_ID,
-	})
-	log_message(f"LILAC run '{name}' (slurm ID {slurm_ID}) is submitted to slurm.")
 
 
 def build_lilac_input_deck(
@@ -144,22 +158,29 @@ def build_lilac_input_deck(
 def build_lilac_bash_script(name: str) -> str:
 	""" construct the bash script that will run the given lilac and return it as a str """
 	return fill_in_template(
-		"run_lilac.sh", {
+		"lilac_run.sh", {
 			"name": name,
 			"root": os.getcwd().replace('\\', '/'),
 		})
 
 
+def prepare_iris_inputs(name: str) -> None:
+	""" load the relevant LILAC outputs and save them and a matching input deck to the relevant directory.
+	"""
+	raise NotImplementedError("IRIS")
+
+
 if __name__ == "__main__":
+	code = sys.argv[1]
 	parser = ArgumentParser(
-		prog="start_lilac_run.sh",
-		description = "Arrange the inputs for a LILAC run in a machine-readable format and submit it to slurm")
+		prog=f"start_{code.lower()}_run.sh",
+		description = f"Arrange the inputs for a {code} run in a machine-readable format and submit it to slurm")
 	parser.add_argument(
 		"name", type=str,
 		help="the name of the run, as specified in run_inputs.csv")
 	parser.add_argument(
 		"--force", action="store_true",
 		help="whether to overwrite any previous iterations of this run")
-	args = parser.parse_args()
+	args = parser.parse_args(sys.argv[2:])
 
-	start_lilac_run(args.name, args.force)
+	start_run(code, args.name, args.force)
