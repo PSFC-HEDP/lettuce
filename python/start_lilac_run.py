@@ -2,7 +2,7 @@ import os
 import shutil
 from argparse import ArgumentParser
 from datetime import datetime
-from re import search
+from re import search, sub
 from subprocess import run
 
 import numpy as np
@@ -108,7 +108,7 @@ def build_lilac_input_deck(
 			# header
 			"submitted": datetime.today().isoformat(" "),
 			# rhydro namelist
-			"name": name,
+			"sanitized name": sub(r"[/\\{}<> ~#%&*?]", "-", name),
 			"absorption fraction": f"{inputs['absorption fraction']:.4f}",
 			"nonthermal model": "none" if inputs["flux limiter"] > 0 else "vgon",
 			"flux limiter": f"{inputs['flux limiter']:.3f}" if inputs["flux limiter"] > 0 else "0",

@@ -4,7 +4,7 @@
 
 ! BASIC RUN CONTROLS, LASER PARAMETERS, AND PHYSICS OPTIONS
 &rhydro
-    job_name = '<<name>>',
+    job_name = '<<sanitized name>>',
     shot_number = '0',
     ipfreq = 999999,
     itmax = 299999,  ! maximum number of timesteps
