@@ -80,7 +80,6 @@
     ieos = <<shell EOS option>>,
     izion = <<shell ionization option>>,
     iopac = <<shell opacity option>>,
-    itnuc = 0,  ! burn off
     eqrad = .false.,
     feather = .false.,
     opgrp = '48_50x50Dt',
@@ -96,7 +95,6 @@
     ieos = 6,  ! analytic Thomas-Fermi EOS table
     izion = 2,  ! average-ion model
     iopac = 1,  ! astrophysical opacity table
-    itnuc = 0,  ! burn off
     eqrad = .false.,
     feather = .false.,
     opgrp = '48_50x50Dt',
