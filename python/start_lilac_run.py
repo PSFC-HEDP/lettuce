@@ -143,11 +143,10 @@ def build_lilac_input_deck(
 
 def build_lilac_bash_script(name: str) -> str:
 	""" construct the bash script that will run the given lilac and return it as a str """
-	base_directory = os.getcwd().replace('\\', '/')
 	return fill_in_template(
 		"run_lilac.sh", {
 			"name": name,
-			"directory": f"{base_directory}/runs/{name}/lilac"
+			"root": os.getcwd().replace('\\', '/'),
 		})
 
 
