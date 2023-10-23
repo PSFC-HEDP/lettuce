@@ -6,7 +6,7 @@ import numpy as np
 from astropy.units import meter, centimeter, second, kilogram, joule, coulomb, farad, kiloelectronvolt
 from fpdf import FPDF
 from matplotlib import pyplot as plt, colors
-from numpy import stack, tile, diff, cumsum, float64, nonzero, pi, average, exp, log, argmin, argmax, nan
+from numpy import stack, tile, cumsum, float64, nonzero, pi, average, exp, log, argmin, argmax
 from numpy.typing import NDArray
 from pandas import Timestamp
 from scipy import integrate
@@ -45,7 +45,8 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 
 		# find the node and interface positions
 		node_position = solution["node/boundary_position"][:, :]  # (μm)
-		zone_position = (node_position[0:-1] + node_position[1:])/2
+		zone_position = (node_position[0:-1, :] + node_position[1:, :])/2
+		zone_height = node_position[1:, :] - node_position[0:-1, :]
 		interface_indices = solution["target/last_zone"][:] - 1  # subtract 1 because LILAC indexes from 2
 		interface_position = node_position[interface_indices, :]
 
@@ -109,7 +110,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 
 		# also calculate knock-on deuteron yield
 		deuterium_areal_density = np.sum(
-			solution["zone/deuteron_density"]*diff(node_position, axis=0), axis=0)*1e-4  # deuteron/cm^2
+			solution["zone/deuteron_density"]*zone_height, axis=0)*1e-4  # deuteron/cm^2
 		knockon_cross_section = .100e-24  # cm^2 (see C. K. Li and al., Phys. Plasmas 8 (2001) 4902)
 		total_yield_rate["ko-d"] = total_yield_rate["DT-n"]*knockon_cross_section*deuterium_areal_density*1.1  # deuteron/ns
 		total_yield["ko-d"] = integrate.trapezoid(x=time, y=total_yield_rate["ko-d"])
@@ -159,7 +160,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 			start = solution["target/first_zone"][i] - 2
 			end = solution["target/last_zone"][i] - 1
 			areal_density[interface_name] = np.sum(
-				(mass_density*diff(node_position, axis=0))[start:end, :], axis=0)*1e-4*1e3  # (mg/cm^2)
+				(mass_density*zone_height)[start:end, :], axis=0)*1e-4*1e3  # (mg/cm^2)
 		areal_density["total"] = areal_density["fill"] + areal_density["shell"]
 
 	# calculate the x-ray emission averaged temperature
@@ -173,8 +174,10 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 
 	# calculate the stopping-averaged coupling parameter
 	average_coupling, average_degeneracy = {}, {}
-	weights = total_yield_rate[main_charged_particle] * \
-	          mass_density/electron_temperature*diff(node_position, axis=0)
+	time_weight = total_yield_rate[main_charged_particle]
+	space_weight = mass_density/electron_temperature*zone_height
+	space_weight = space_weight/np.sum(space_weight, axis=0)
+	weights = time_weight*space_weight
 	if np.any(weights > 0):
 		average_electron_temperature["stopping"] = average(electron_temperature, weights=weights)
 		average_electron_density["stopping"] = average(electron_density, weights=weights)
@@ -208,7 +211,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 		[time] + [total_yield_rate[reaction] for reaction in reactions],
 		axis=1)
 	np.savetxt(
-		f"{directory}/time_history.csv", table, delimiter=",",
+		f"{directory}/time_history.csv", table, delimiter=",",  # type: ignore
 		header="Time (ns), DD-n (ns^-1), DT-n (ns^-1), D3He-p (ns^-1)")
 
 	# plot the spacio-temporally resolved ion temperature and shell trajectory

@@ -80,9 +80,9 @@ def start_lilac_run(name: str, force: bool) -> None:
 	with open(f"runs/{name}/lilac/run_lilac.sh", "w") as file:
 		file.write(bash_script)
 	np.savetxt(f"runs/{name}/lilac/pulse_shape.txt",
-	           np.stack([pulse_time, pulse_power], axis=1), delimiter=",")
+	           np.stack([pulse_time, pulse_power], axis=1), delimiter=",")  # type: ignore
 	np.savetxt(f"runs/{name}/lilac/beam_profile.txt",
-	           np.stack([beam_radius, beam_intensity], axis=1), delimiter=" ")
+	           np.stack([beam_radius, beam_intensity], axis=1), delimiter=" ")  # type: ignore
 
 	# finally, submit the slurm job
 	submission = run(["sbatch", f"runs/{name}/lilac/run_lilac.sh"],
