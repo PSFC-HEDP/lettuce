@@ -1,3 +1,4 @@
+import os.path
 from argparse import ArgumentParser
 
 import h5py
@@ -21,8 +22,21 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 	""" read the raw results of a successful LILAC simulation and compile them into a human-readable
 	    PDF.  also save some key numbers like yield and burn-average ρR to run_outputs.csv.
 	"""
-	print("loading LILAC output...")
+	# start by updating the run_outputs table
+	write_row_to_outputs_table({
+		"name": name,
+		"status": status,
+		"status changed": Timestamp.now(),
+	})
+
+	# check if there's any output
 	directory = f"runs/{name}/lilac"
+	if not os.path.isfile(f"{directory}/output.h5"):
+		print("There was no LILAC output to postprocess.")
+		return
+
+	# if there is, get to postprocessing!
+	print("loading LILAC output...")
 	with h5py.File(f'{directory}/output.h5') as solution:
 		print("processing LILAC output...")
 		num_layers = solution["target/material_name"].size
@@ -333,8 +347,6 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 	print("updating run_outputs.csv...")
 	write_row_to_outputs_table({
 		"name": name,
-		"status": "completed",
-		"status changed": Timestamp.now(),
 		"yield": total_yield[main_reaction],
 		"bang-time": bang_time[main_reaction],
 		"convergence ratio": convergence_ratio,

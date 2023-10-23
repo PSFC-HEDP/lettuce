@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=LILAC_<<name>>
-#SBATCH --time=02:00:00
+#SBATCH --time=10:00:00
 #SBATCH --partition=blizzard
 #SBATCH --ntasks=1
 #SBATCH --mem-per-cpu=4GB
@@ -19,24 +19,30 @@ echo "LILAC run '<<name>>' starts."
 echo "$(date +'%m-%d %H:%M') | LILAC run '<<name>>' starts." >> ../../../runs.log
 
 # run LILAC
-lilac
+timeout 9h lilac
 exit_code=$?
 
 # figure out if the run was successful, and if not, why not
 if [ $exit_code -eq 0 ]; then
-	if grep -q "negative temperature detected" "lilac_$SLURM_JOB_ID.log"; then
-		exit_code=4
-		result="failed"
-		exit_string="LILAC run '<<name>>' fails with a negative temperature error."
-	elif grep -q "run summary" "lilac_$SLURM_JOB_ID.log"; then
+	if grep -q "run summary" "lilac_$SLURM_JOB_ID.log"; then
 		exit_code=0
 		result="completed"
 		exit_string="LILAC run '<<name>>' exits successfully."
+	elif grep -q "negative temperature detected" "lilac_$SLURM_JOB_ID.log"; then
+		exit_code=4
+		result="failed"
+		exit_string="LILAC run '<<name>>' fails with a negative temperature error."
 	else
 		exit_code=3
 		result="failed"
 		exit_string="LILAC run '<<name>>' quits prematurely (see '<<directory>>/lilac_$SLURM_JOB_ID.log')."
 	fi
+elif [ $exit_code -eq 124 ]; then
+	result="timeout"
+	exit_string="LILAC run '<<name>>' times out."
+elif [ $exit_code -eq 137 ]; then
+	result="cancelled"
+	exit_string="LILAC run '<<name>>' is cancelled."
 else
 	result="failed"
 	exit_string="LILAC run '<<name>>' fails with error_code ${exit_code} (see '<<directory>>/lilac_$SLURM_JOB_ID.log')."
