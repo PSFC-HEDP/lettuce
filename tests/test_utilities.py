@@ -3,7 +3,8 @@ import numpy.testing as npt
 import pytest
 from numpy import array, concatenate, inf
 
-from python.utilities import gradient, width, apparent_brightness, degrade_laser_pulse, to_superscript
+from python.utilities import gradient, width, apparent_brightness, degrade_laser_pulse, to_superscript, \
+	select_key_indices, rebin
 
 
 def test_degrade_laser_pulse():
@@ -53,6 +54,30 @@ def test_width():
 	                          array([1.])), inf)
 	npt.assert_allclose(width(array([]),
 	                          array([])), inf)
+
+
+def test_select_key_indices():
+	for inpoot, expected_output in [
+		(array([0., 1., 3., 1., 1., 4., 0.]), (array([0, 2, 4, 5, 7]), array([1, 2, 4, 5]))),
+		(array([0., 0., 0., 0.]), (array([0, 1, 2, 3, 4]), array([0, 1, 2, 3]))),
+		(array([1., 1.]), (array([0, 1, 2]), array([0, 1]))),
+		(array([]), (array([0]), array([]))),
+	]:
+		actual_output = select_key_indices(inpoot, 4)
+		npt.assert_equal(actual_output[0], expected_output[0])
+		npt.assert_equal(actual_output[1], expected_output[1])
+
+
+def test_rebin():
+	npt.assert_allclose(
+		rebin(
+			array([[6.], [2.], [7.], [3.], [1.], [8.], [5.], [3.], [0.], [9.]]),
+			array([0, 3, 5, 10]), axis=0),
+		array([[5.], [2.], [5.]]))
+	with pytest.raises(ValueError):
+		rebin(
+			array([[6.], [2.], [7.], [3.], [1.], [8.], [5.], [3.], [0.], [9.]]),
+			array([3, 5, 11]), axis=0)
 
 
 def test_apparent_brightness():

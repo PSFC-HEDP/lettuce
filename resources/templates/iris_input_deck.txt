@@ -1,0 +1,91 @@
+! IRIS INPUT DECK
+! generated using lettuce
+! <<submitted>>
+
+! GENERAL OPTIONS
+&info
+    job_name = <<sanitized name>>
+    shot_number = 0
+    n_cameras = 1  ! one virtual imager
+    n_detectors = 1  ! one virtual spectrometer
+
+    n_inputs = <<number of times>>
+    n_species = 3  ! number of materials?
+    problem_type = 1  ! read from file
+/
+
+&material
+    ! FILL MATERIAL DETAILS
+    material_code(1) = <<fill material code>>
+    material_fraction(1,:) = <<fill hydrogen fraction>>, <<fill deuterium fraction>>, <<fill tritium fraction>>, <<fill helium3 fraction>>, <<fill carbon fraction>>
+    atomic_weight(1) = <<fill mean atomic mass>>  ! kg
+    zmax(1) = <<fill max atomic number>>  ! e
+
+    ! SHELL MATERIAL DETAILS
+    material_code(1) = <<shell material code>>
+    material_fraction(1,:) = <<shell hydrogen fraction>>, <<shell deuterium fraction>>, <<shell tritium fraction>>, <<shell helium3 fraction>>, <<shell carbon fraction>>
+    atomic_weight(1) = <<shell mean atomic mass>>  ! kg
+    zmax(1) = <<shell max atomic number>>  ! e
+
+    ! ALUMINUM MATERIAL DETAILS
+    material_code(1) = 13
+    material_fraction(1,:) = 0, 0, 0, 0, 0
+    atomic_weight(1) = 4.480389792595243e-26  ! kg
+    zmax(1) = 13  ! e
+/
+
+! PHYSICS OPTIONS
+&fusion
+    minimum_virtual_reaction_particles(1) = 1000000
+    minimum_virtual_reaction_particles(2) = 1000000
+    minimum_virtual_reaction_particles(3) = 1000000
+
+    velocity_shift = .true.
+
+    thermal_broadening = .true.
+/
+
+! KNOCK-ON SETTINGS
+&scatter
+    enable_knock_on = .true.
+    enable_breakup = .true.
+
+    ! enable specific knock-on reactions
+    enable_nT = .true.
+    enable_nD = .true.
+    enable_nC = .false.
+    enable_nH = .false.
+
+    ! number of allowed scatters
+    transported_scatter_iterations(1) = 1  ! double-scatters allowed in fill
+    transported_scatter_iterations(2) = 0  ! one scatter allowed in shell
+    transported_scatter_iterations(3) = -1  ! no scattering in aluminum
+
+    ! stopping power model (0 = no stopping, 1 = Li-Petrasso-Zylstra, 2 = Maynard-Deutsch)
+    charged_particle_transport_model = <<stopping power model>>
+ /
+
+! RANDOM SEED
+&random
+    seed = 88043649
+/
+
+! HDF5 FILENAMES
+&io
+<<loop j>>
+    input_filenames(<<j>>) = '<<directory>>/profiles/time<<j>>.h5'
+<<endloop j>>
+
+    output_filename = 'output'
+/
+
+! VIRTUAL DETECTOR SETTINGS
+&detector
+    ! phi = 90deg, theta = 0deg, omega_min = 0 sr, size > 4pi sr
+    detector_info(1:4,1) = 1.5707963267948966, 0, 0, 15.707963267948966
+    detector_names(1) = '4pi'
+
+    ! phi = 90deg, theta = 0deg, radius = 1 cm, size = 100 um, resolution = 2 um
+    camera_info(1:14,1) = 1.5707963267948966, 0, 0.01, 1e-04, 2e-06,
+    camera_names(1) = 'x'
+/

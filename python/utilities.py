@@ -1,6 +1,8 @@
 import numpy as np
 from matplotlib import pyplot as plt
-from numpy import expand_dims, geomspace, arange, interp, exp, sqrt, isfinite, inf, cumsum, where
+from numpy import expand_dims, geomspace, arange, interp, exp, sqrt, isfinite, inf, cumsum, where, concatenate, \
+	linspace, unique, \
+	zeros, empty, floor, histogram
 from numpy.typing import NDArray
 from scipy import integrate
 
@@ -59,6 +61,63 @@ def width(x: NDArray[float], y: NDArray[float]):
 		return inf
 	else:
 		return x_rite - x_left
+
+
+def select_key_indices(weights: NDArray[float], num_regions: int) -> tuple[NDArray[int], NDArray[int]]:
+	""" given some 1D data representing a distribution, select a set of n indices for n points in that
+	    distribution that characterize it well.  specifically, divide it into n regions of roughly equal
+	    integral, then find the indices of the bin that contains the median of each region.
+	    :return: num_regions+1 division indices, starting with 0 and ending with weights.size and having no duplicates, and
+	             num_regions central indices, each falling within [division[i], division[i+1])
+	"""
+	if np.any(weights < 0):
+		raise ValueError("negative inputs to this function cause ambiguity")
+	if weights.size == 0:
+		return zeros(1, dtype=int), zeros(0, dtype=int)
+
+	x = arange(weights.size + 1)
+	y = concatenate([[0], cumsum(weights)])
+	# in the event of zero weights, act like the weights are uniform instead
+	if np.min(y) == np.max(y):
+		y = x
+
+	divisions = interp(linspace(np.min(y), np.max(y), num_regions + 1), y, x)
+	# snap them to integer values
+	divisions = np.round(divisions).astype(int)
+	# drop any duplicates (this means the size of the array won't always be num_regions+1 but that's fine)
+	divisions = unique(divisions)
+	# if the first few elements are 0, the first bin can be ambiguus.  snap it to 0.
+	if divisions[0] != 0:
+		assert y[divisions[0]] == 0
+	divisions[0] = 0
+
+	# finally, find the median point of each region
+	centers = empty(divisions.size - 1, dtype=int)
+	for i in range(divisions.size - 1):
+		centers[i] = floor(interp((y[divisions[i]] + y[divisions[i + 1]])/2, y, x))
+
+	return divisions, centers
+
+
+def rebin(values: NDArray[float], bin_indices: NDArray[int], axis=0) -> NDArray[float]:
+	""" reduce the size of an array by averaging its values within certain index bins
+	    :param values: the original values to be averaged with each other
+	    :param bin_indices: the index at each bin edge. a value `values[i]` belongs to the bin `j` iff i ∈ [bin_indices[j], bin_indices[j + 1]).
+	    :param axis: the axis along which to apply the bins
+	    :return: an array of averages, where the jth element is the average of all values in bin j
+	"""
+	if bin_indices[0] != 0:
+		raise ValueError(f"the left edge of the first bin must be 0, not {bin_indices[0]}")
+	elif bin_indices[-1] != values.shape[axis]:
+		raise ValueError(f"the right edge of the last bin must be the size of values ({values.size}), not {bin_indices[-1]}")
+	elif axis != 0 or values.ndim != 2:
+		raise NotImplementedError("I haven't generalized this, sorry.")
+	new_values = empty((bin_indices.size - 1,) + values.shape[1:])
+	numbers, _ = histogram(arange(values.shape[axis]), bins=bin_indices)
+	for i in range(values.shape[1]):
+		totals, _ = histogram(arange(values.shape[axis]), bins=bin_indices, weights=values[:, i])
+		new_values[:, i] = totals/numbers
+	return new_values
 
 
 def apparent_brightness(ionization: NDArray[float], electron_number_density: NDArray[float],
