@@ -66,7 +66,7 @@ if [ -d out ]; then
 	rm --recursive --force out
 fi
 
-# call the postprocessing script to update the run_outputs.csv table and
+# call the postprocessing script to generate the summary PDF
 cd "<<root>>" || exit 1
 module load anaconda3/2023.07-2
 PYTHONPATH=. python3 python/postprocess_lilac_run.py "<<name>>" --status="${result}"

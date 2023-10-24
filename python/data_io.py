@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 from re import fullmatch, sub, DOTALL, search
-from typing import Optional, Any
+from typing import Optional, Any, Iterable
 
 import numpy as np
 from numpy import isfinite
@@ -78,12 +78,15 @@ def log_message(message: str) -> None:
 	print(message)
 
 
-def fill_in_template(template_filename: str, parameters: dict[str, str], flags: Optional[dict[str, bool]] = None) -> str:
+def fill_in_template(template_filename: str, parameters: dict[str, str],
+                     flags: Optional[dict[str, bool]] = None,
+                     loops: Optional[dict[str, Iterable[str]]] = None) -> str:
 	""" load a template from resources/templates and replace all of the angle-bracket-marked
 	    parameter names with actual user-specified parameters
 	    :param template_filename: the filename of the template to load, excluding resources/templates/
 	    :param parameters: the set of strings that should be inserted into the <<>> spots
 	    :param flags: a set of booleans to be used to evaluate <<if>> blocks
+	    :param loops: a set of iterables to be used to evaluate <<loop>> blocks
 	    :return: a string containing the contents of the template with all the <<>>s evaluated
 	    :raise KeyError: if there is a <<>> expression in the template and the corresponding value is not
 	                     given in parameters or flags
@@ -99,8 +102,8 @@ def fill_in_template(template_filename: str, parameters: dict[str, str], flags: 
 			                 "what it's for.  onestly I just wish nan didn't exist.   it's like javascript null.  "
 			                 "anyway, check your inputs.  make sure none of them are empty or nan (except the "
 			                 "last three, which may be empty).")
-		if search(f"<<{key}>>", content):
-			content = sub(f"<<{key}>>", value, content)
+		if search(f"<<{key}>>", content):  # TODO: put the format string in the input deck and make the type of value Any
+			content = sub(f"<<{key}>>", value.replace("\\", "\\\\"), content)
 		else:
 			raise KeyError(f"the parameter <<{key}>> was not found in the template {template_filename}.")
 
@@ -114,6 +117,18 @@ def fill_in_template(template_filename: str, parameters: dict[str, str], flags: 
 			# if it's inactive, remove the <<if>> and <<endif>> lines and everything between them
 			else:
 				content = sub(f"<<if {key}>>.*<<endif {key}>>\n", "", content, flags=DOTALL)
+
+	# finally do the loops
+	if loops is not None:
+		for key, values in loops.items():
+			# repeat the block for each item in the loop
+			block = search(f"<<loop {key}>>(.*)<<endloop {key}>>\n", content, flags=DOTALL).group(1)
+			result = ""
+			for value in values:
+				result += sub(f"<<{key}>>", value, block)
+			content = sub(f"<<loop {key}>>.*<<endloop {key}>>\n",
+			              result.replace("\\", "\\\\"), content, flags=DOTALL)
+
 	# check to make sure we got it all
 	remaining_blank = search("<<.*>>", content)
 	if remaining_blank:

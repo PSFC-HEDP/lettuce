@@ -6,19 +6,23 @@ from datetime import datetime
 from re import search, sub
 from subprocess import run
 
+import h5py
 import numpy as np
+from numpy import pi, zeros, append, sort, newaxis, digitize, stack, histogram, identity, diff, arange, \
+	empty, maximum, minimum, cumsum
 from pandas import Series, Timestamp, notnull
 
 from python.data_io import load_pulse_shape, parse_gas_components, load_beam_profile, load_inputs_table, \
 	load_outputs_table, log_message, fill_in_template, write_row_to_outputs_table
-from python.material import Material, get_solid_material_from_name, get_gas_material_from_components
-from python.utilities import degrade_laser_pulse
+from python.material import Material, get_solid_material_from_name, get_gas_material_from_components, nuclide_symbol
+from python.utilities import degrade_laser_pulse, gradient, select_key_indices, rebin
 
 
-def start_run(code: str, name: str, force: bool) -> None:
+def start_run(code: str, name: str, stopping_power_mode: int, force: bool) -> None:
 	""" arrange the inputs for a LILAC or IRIS run in a machine-readable format and submit it to slurm
 	    :param code: one of "LILAC" or "IRIS"
 	    :param name: a string that will let us look up this run's inputs in the run_inputs.csv table
+	    :param stopping_power_mode: one of 0 for no stopping, 1 for Li-Petrasso-Zylstra, or 2 for Maynard-Deutsch
 	    :param force: whether to run this even if another version of this run already exists TODO: let the user hit "y" so they don't have to redo the command
 	"""
 	if code == "LILAC":
@@ -45,14 +49,15 @@ def start_run(code: str, name: str, force: bool) -> None:
 			shutil.rmtree(f"runs/{name}/lilac")
 
 	if code == "LILAC":
-		prepare_lilac_inputs(name)
+		script_path = prepare_lilac_inputs(name)
 	elif code == "IRIS":
-		prepare_iris_inputs(name)
+		script_path = prepare_iris_inputs(name, stopping_power_mode)
 	else:
-		raise ValueError(f"unrecognized code: '{code}'")
+		print(f"unrecognized code: '{code}'")
+		return
 
 	# finally, submit the slurm job
-	submission = run(["sbatch", f"runs/{name}/{code.lower()}/run.sh"],
+	submission = run(["sbatch", script_path],
 	                 check=True, capture_output=True, text=True)
 	slurm_ID = search(r"batch job ([0-9]+)", submission.stdout).group(1)
 
@@ -66,7 +71,7 @@ def start_run(code: str, name: str, force: bool) -> None:
 	log_message(f"LILAC run '{name}' (slurm ID {slurm_ID}) is submitted to slurm.")
 
 
-def prepare_lilac_inputs(name: str) -> None:
+def prepare_lilac_inputs(name: str) -> str:
 	""" load the LILAC input parameters from run_inputs.csv and save the pulse shape, beam profile,
 	    and input deck to the relevant directory.
 	"""
@@ -76,19 +81,13 @@ def prepare_lilac_inputs(name: str) -> None:
 	try:
 		inputs = inputs_table.loc[name]
 	except KeyError:
-		print(f"please add shot '{name}' to the run_inputs.csv file.")
-		return
+		raise KeyError(f"please add shot '{name}' to the run_inputs.csv file.")
 	if inputs.ndim != 1:
-		print(f"run '{name}' appears more than once in the run_inputs.csv file!")
-		return
+		raise KeyError(f"run '{name}' appears more than once in the run_inputs.csv file!")
 
 	# load the laser data
-	try:
-		pulse_time, pulse_power = load_pulse_shape(inputs["pulse shape"], inputs["laser energy"])
-		beam_radius, beam_intensity = load_beam_profile(inputs["beam profile"])
-	except (IOError, ValueError) as e:
-		print(e)
-		return
+	pulse_time, pulse_power = load_pulse_shape(inputs["pulse shape"], inputs["laser energy"])
+	beam_radius, beam_intensity = load_beam_profile(inputs["beam profile"])
 
 	if notnull(inputs["laser degradation"]):
 		pulse_power = degrade_laser_pulse(pulse_power, inputs["laser degradation"])
@@ -111,6 +110,8 @@ def prepare_lilac_inputs(name: str) -> None:
 	           np.stack([pulse_time, pulse_power], axis=1), delimiter=",")  # type: ignore
 	np.savetxt(f"{directory}/beam_profile.txt",
 	           np.stack([beam_radius, beam_intensity], axis=1), delimiter=" ")  # type: ignore
+
+	return f"{directory}/run.sh"
 
 
 def build_lilac_input_deck(
@@ -164,23 +165,156 @@ def build_lilac_bash_script(name: str) -> str:
 		})
 
 
-def prepare_iris_inputs(name: str) -> None:
+def prepare_iris_inputs(name: str, stopping_power_mode: int) -> str:
 	""" load the relevant LILAC outputs and save them and a matching input deck to the relevant directory.
 	"""
-	raise NotImplementedError("IRIS")
+	# load information from the LILAC output file
+	with h5py.File(f"runs/{name}/lilac/output.h5") as file:
+		num_layers = file["target/material_name"].size
+		material_codes = file["target/material_codes"][:, 0]
+		material_names = file["target/material_name"][:]
+		mean_atomic_masses = file["target/atomic_weight"][:]
+		max_atomic_numbers = np.max(file["target/component_nuclear_charge"][:, :], axis=1)
+
+		# converting the component info to these fractions is a bit tricky
+		nuclide_fractions = {nuclide: zeros(num_layers) for nuclide in ["H", "D", "T", "³He", "¹²C"]}
+		for i in range(num_layers):
+			for j in range(file["target/component_abundance"].shape[1]):
+				nuclide = nuclide_symbol(round(file["target/component_nuclear_charge"][i, j]),
+				                         round(file["target/component_atomic_weight"][i, j]))
+				if nuclide in nuclide_fractions:
+					nuclide_fractions[nuclide][i] += file["target/component_abundance"][i, j]
+
+		# the trickiest thing here is that we need to coarsen the spacio-temporal stuff
+		burn_rate = gradient(file["time/total_dd_neutrons"][:] + file["time/total_dt_neutrons"][:],
+		                     file["time/absolute_time"][:])
+		time_bin_indices, key_time_indices = select_key_indices(burn_rate, 21)
+		num_fine_times = burn_rate.size
+		num_times = key_time_indices.size
+		zone_mass = file["zone/zone_volume"][:, 0]*file["zone/mass_density"][:, 0]
+		key_node_indices, _ = select_key_indices(zone_mass, 50)
+		# make sure layers don't get mixed together at the coarsened zone boundaries
+		for i in range(num_layers):
+			layer_boundary = file["target/last_zone"][i] - 1
+			if layer_boundary not in key_node_indices:
+				key_node_indices = append(key_node_indices, layer_boundary)
+		key_node_indices = sort(key_node_indices)  # make sure it stays sorted
+		num_fine_zones = zone_mass.shape[0]
+		num_zones = key_node_indices.size - 1
+		layer_index = digitize(key_node_indices[:-1], file["target/last_zone"][:] - 1)
+
+		# then rebin the quantities to the new lower resolution
+		time = file["time/absolute_time"][key_time_indices]
+		node_position = file["node/boundary_position"][:, key_time_indices][key_node_indices, :]
+		mass_density = rebin(file["zone/mass_density"][:, key_time_indices], key_node_indices, axis=0)
+		ion_temperature = rebin(file["zone/mass_density"][:, key_time_indices], key_node_indices, axis=0)
+		electron_temperature = rebin(file["zone/mass_density"][:, key_time_indices], key_node_indices, axis=0)
+		average_ionization = rebin(file["zone/mass_density"][:, key_time_indices], key_node_indices, axis=0)
+		velocity = rebin(file["zone/mass_density"][:, key_time_indices], key_node_indices, axis=0)
+		material_fraction = identity(num_layers)[:, layer_index]  # this should be a sort of identity matrix
+		# reactions in particular are tricky
+		reactions = {}
+		for key, cumulative_reactions in [("DT", file["zone/cumulative_dtn_yield"][:, :]), ("DD", file["zone/cumulative_ddn_yield"][:, :])]:
+			# first convert to actual cumulative reactions at each time because I find the indexing easier that way
+			cumulative_reactions = cumsum(cumulative_reactions, axis=1)
+			# reduce the cumulative reactions to the key time bins
+			cumulative_reactions = (
+				cumulative_reactions[:, maximum(time_bin_indices - 1, 0)] +
+				cumulative_reactions[:, minimum(time_bin_indices, num_fine_times - 1)])/2
+			# differentiate in time to get the number of reactions in each section
+			reactions_per_zone = diff(cumulative_reactions, axis=1)
+			# then rebin in space to the new coarser space bins
+			reactions_per_bin = empty((num_zones, num_times))
+			for j in range(num_times):
+				reactions_per_bin[:, j] = histogram(
+					arange(num_fine_zones), weights=reactions_per_zone[:, j], bins=key_node_indices)[0]
+			reactions[key] = reactions_per_bin
+
+	# save everything to the new directory
+	directory = f"runs/{name}/iris-model{stopping_power_mode}"
+	os.makedirs(directory, exist_ok=True)
+
+	# write all of the new HDF5 input files
+	keV = 1e3*1.602e-19
+	for j in range(num_times):  # the filenames index from 1 because Fortran does
+		with h5py.File(f"{directory}/profiles/time{j + 1}.h5", "w") as file:
+			file["title"] = name
+			file["n_r_cells"] = num_zones
+			file["n_theta_cells"] = 1  # one theta cell because LILAC is 1D
+			file["n_phi_cells"] = 1  # one phi cell because LILAC is 1D
+			file["n_materials"] = num_layers
+			file["time"] = time[j]  # ns
+			file["material_names"] = material_names
+			file["r"] = node_position[newaxis, newaxis, :, j]*1e-6  # m
+			file["t"] = [0, pi]  # rad
+			file["p"] = [0, 2*pi]  # rad
+			file["mass_density"] = mass_density[newaxis, newaxis, :, j]/1e-3  # kg/m^3
+			file["ion_temperature"] = ion_temperature[newaxis, newaxis, :, j]*keV  # J
+			file["electron_temperature"] = electron_temperature[newaxis, newaxis, :, j]*keV  # J
+			file["z_effective"] = average_ionization[newaxis, newaxis, :, j]
+			file["r_velocity"] = velocity[newaxis, newaxis, :, j]*1e-2  # m/s
+			file["t_velocity"] = zeros((1, 1, num_zones))
+			file["p_velocity"] = zeros((1, 1, num_zones))
+			file["material_fraction"] = material_fraction[:, newaxis, newaxis, :]
+			file["reactions"] = stack([reactions["DT"][newaxis, newaxis, :, j],
+			                           reactions["DD"][newaxis, newaxis, :, j],
+			                           zeros((1, 1, num_zones))], axis=0)
+
+	# compose the input deck and bash script
+	current_working_directory = os.getcwd().replace('\\', '/')
+	input_deck = fill_in_template(
+		"iris_input_deck.txt", {
+			"submitted": datetime.today().isoformat(" "),
+			"sanitized name": sub(r"[/\\{}<> ~#%&*?]", "-", name),
+			"number of times": f"{time.size:d}",
+			"fill material code": f"{material_codes[0]:d}",
+			"fill hydrogen fraction": f"{nuclide_fractions['H'][0]:.6f}",
+			"fill deuterium fraction": f"{nuclide_fractions['D'][0]:.6f}",
+			"fill tritium fraction": f"{nuclide_fractions['T'][0]:.6f}",
+			"fill helium3 fraction": f"{nuclide_fractions['³He'][0]:.6f}",
+			"fill carbon fraction": f"{nuclide_fractions['¹²C'][0]:.6f}",
+			"fill mean atomic mass": f"{mean_atomic_masses[0]*1.66054e-27:.8g}",  # kg
+			"fill max atomic number": f"{max_atomic_numbers[0]:.8g}",
+			"shell material code": f"{material_codes[1]:d}",
+			"shell hydrogen fraction": f"{nuclide_fractions['H'][1]:.6f}",
+			"shell deuterium fraction": f"{nuclide_fractions['D'][1]:.6f}",
+			"shell tritium fraction": f"{nuclide_fractions['T'][1]:.6f}",
+			"shell helium3 fraction": f"{nuclide_fractions['³He'][1]:.6f}",
+			"shell carbon fraction": f"{nuclide_fractions['¹²C'][1]:.6f}",
+			"shell mean atomic mass": f"{mean_atomic_masses[1]*1.66054e-27:.8g}",  # kg
+			"shell max atomic number": f"{max_atomic_numbers[1]}",
+			"stopping power model": f"{stopping_power_mode:d}",
+			"directory": f"{current_working_directory}/{directory}",
+		},
+		loops = {"j": [str(j + 1) for j in range(num_times)]},  # index from 1 because IRIS does
+	)
+	with open(f"{directory}/inputdeck.txt", "w") as file:
+		file.write(input_deck)
+
+	bash_script = fill_in_template(
+		"iris_run.sh", {
+			"name": name,
+			"root": current_working_directory,
+		})
+	with open(f"{directory}/run.sh", "w") as file:
+		file.write(bash_script),
+	return f"{directory}/run.sh"
 
 
 if __name__ == "__main__":
 	code = sys.argv[1]
 	parser = ArgumentParser(
 		prog=f"start_{code.lower()}_run.sh",
-		description = f"Arrange the inputs for a {code} run in a machine-readable format and submit it to slurm")
+		description=f"Arrange the inputs for a {code} run in a machine-readable format and submit it to slurm")
 	parser.add_argument(
 		"name", type=str,
 		help="the name of the run, as specified in run_inputs.csv")
+	parser.add_argument(
+		"--stopping_mode", type=int, default=1,
+		help="the number of the plasma stopping-power model to use for charged particles (0 = none, 1 = Li-Petrasso-Zylstra, 2 = Maynard-Deutsch)",)
 	parser.add_argument(
 		"--force", action="store_true",
 		help="whether to overwrite any previous iterations of this run")
 	args = parser.parse_args(sys.argv[2:])
 
-	start_run(code, args.name, args.force)
+	start_run(code, args.name, args.stopping_mode, args.force)

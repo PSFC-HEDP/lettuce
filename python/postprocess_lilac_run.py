@@ -37,7 +37,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 
 	# if there is, get to postprocessing!
 	print("loading LILAC output...")
-	with h5py.File(f'{directory}/output.h5') as solution:
+	with h5py.File(f"{directory}/output.h5") as solution:
 		print("processing LILAC output...")
 		num_layers = solution["target/material_name"].size
 		num_zones = solution["target/zone/atomic_mass"].size
