@@ -71,7 +71,7 @@ If you have multiple runs you want to do, call this once for each one and they w
 
 While you're waiting, you can see how your runs are doing with
 ~~~bash
-./check_on_lilac_runs.sh
+./check_on_runs.sh
 ~~~
 This will print out all of the LILAC that is currently queued or running.
 
@@ -87,7 +87,7 @@ To start an IRIS run, call
 
 While you're waiting, you can see how your runs are doing with
 ~~~bash
-./check_on_iris_runs.sh
+./check_on_runs.sh
 ~~~
 This will print out all of the IRIS that is currently queued or running.
 

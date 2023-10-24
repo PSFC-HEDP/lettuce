@@ -68,7 +68,7 @@ def start_run(code: str, name: str, stopping_power_mode: int, force: bool) -> No
 		"status changed": Timestamp.now(),
 		"slurm ID": slurm_ID,
 	})
-	log_message(f"LILAC run '{name}' (slurm ID {slurm_ID}) is submitted to slurm.")
+	log_message(f"{code} run '{name}' (slurm ID {slurm_ID}) is submitted to slurm.")
 
 
 def prepare_lilac_inputs(name: str) -> str:
@@ -232,7 +232,7 @@ def prepare_iris_inputs(name: str, stopping_power_mode: int) -> str:
 
 	# save everything to the new directory
 	directory = f"runs/{name}/iris-model{stopping_power_mode}"
-	os.makedirs(directory, exist_ok=True)
+	os.makedirs(f"{directory}/profiles", exist_ok=True)
 
 	# write all of the new HDF5 input files
 	keV = 1e3*1.602e-19
@@ -295,6 +295,7 @@ def prepare_iris_inputs(name: str, stopping_power_mode: int) -> str:
 		"iris_run.sh", {
 			"name": name,
 			"root": current_working_directory,
+			"folder": f"iris-model{stopping_power_mode}"
 		})
 	with open(f"{directory}/run.sh", "w") as file:
 		file.write(bash_script),

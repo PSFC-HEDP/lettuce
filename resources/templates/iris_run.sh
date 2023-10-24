@@ -5,7 +5,7 @@
 #SBATCH --ntasks=16
 #SBATCH --mem-per-cpu=4GB
 #SBATCH --qos=b-standard
-#SBATCH --output=<<root>>/runs/<<name>>/iris/iris_%A.log
+#SBATCH --output=<<root>>/runs/<<name>>/<<folder>>/iris_%A.log
 #SBATCH --mail-type=END
 
 # Load IRIS and clean up the environment
@@ -14,7 +14,7 @@ module load hdf5/1.12.0/b3
 module load iris/2021.09.03/b1
 
 # move to the directory where runs happen
-cd "<<root>>/runs/<<name>>/iris" || exit 1
+cd "<<root>>/runs/<<name>>/<<folder>>" || exit 1
 
 echo "IRIS run '<<name>>' starts."
 echo "$(date +'%m-%d %H:%M') | IRIS run '<<name>>' starts." >> "<<root>>/runs.log"
@@ -35,7 +35,7 @@ elif [ $exit_code -eq 137 ]; then
 	exit_string="IRIS run '<<name>>' is cancelled."
 else
 	result="failed"
-	exit_string="IRIS run '<<name>>' fails with error_code ${exit_code} (see '<<root>>/runs/<<name>>/iris/iris_$SLURM_JOB_ID.log')."
+	exit_string="IRIS run '<<name>>' fails with error_code ${exit_code} (see '<<root>>/runs/<<name>>/<<folder>>/iris_$SLURM_JOB_ID.log')."
 fi
 
 # log the result to the slurm log and to runs.log
