@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from numpy import expand_dims, geomspace, arange, interp, exp, sqrt, isfinite, inf, cumsum, where, concatenate, \
 	linspace, unique, \
-	zeros, empty, floor, histogram
+	zeros, empty, floor, histogram, float64
 from numpy.typing import NDArray
 from scipy import integrate
 
@@ -99,10 +99,11 @@ def select_key_indices(weights: NDArray[float], num_regions: int) -> tuple[NDArr
 	return divisions, centers
 
 
-def rebin(values: NDArray[float], bin_indices: NDArray[int], axis=0) -> NDArray[float]:
+def rebin(values: NDArray[float], bin_indices: NDArray[int], weights: NDArray[float], axis=0) -> NDArray[float]:
 	""" reduce the size of an array by averaging its values within certain index bins
 	    :param values: the original values to be averaged with each other
 	    :param bin_indices: the index at each bin edge. a value `values[i]` belongs to the bin `j` iff i ∈ [bin_indices[j], bin_indices[j + 1]).
+	    :param weights: the weighting from each value
 	    :param axis: the axis along which to apply the bins
 	    :return: an array of averages, where the jth element is the average of all values in bin j
 	"""
@@ -113,9 +114,10 @@ def rebin(values: NDArray[float], bin_indices: NDArray[int], axis=0) -> NDArray[
 	elif axis != 0 or values.ndim != 2:
 		raise NotImplementedError("I haven't generalized this, sorry.")
 	new_values = empty((bin_indices.size - 1,) + values.shape[1:])
-	numbers, _ = histogram(arange(values.shape[axis]), bins=bin_indices)
 	for i in range(values.shape[1]):
-		totals, _ = histogram(arange(values.shape[axis]), bins=bin_indices, weights=values[:, i])
+		# use double precision because histogram is super sensitive to roundoff for some reason
+		totals, _ = histogram(arange(values.shape[axis]), bins=bin_indices, weights=(weights*values)[:, i].astype(float64))
+		numbers, _ = histogram(arange(values.shape[axis]), bins=bin_indices, weights=weights[:, i])
 		new_values[:, i] = totals/numbers
 	return new_values
 

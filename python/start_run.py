@@ -9,7 +9,7 @@ from subprocess import run
 import h5py
 import numpy as np
 from numpy import pi, zeros, append, sort, newaxis, digitize, stack, histogram, identity, diff, arange, \
-	empty, maximum, minimum, cumsum
+	empty, maximum, minimum, cumsum, float64, average
 from pandas import Series, Timestamp, notnull
 
 from python.data_io import load_pulse_shape, parse_gas_components, load_beam_profile, load_inputs_table, \
@@ -181,7 +181,8 @@ def prepare_iris_inputs(name: str, stopping_power_mode: int) -> str:
 		material_codes = file["target/material_codes"][:, 0]
 		material_names = file["target/material_name"][:]
 		mean_atomic_masses = file["target/atomic_weight"][:]
-		max_atomic_numbers = np.max(file["target/component_nuclear_charge"][:, :], axis=1)
+		mean_atomic_numbers = average(file["target/component_nuclear_charge"][:, :],
+		                              weights=file["target/component_abundance"], axis=1)
 
 		# converting the component info to these fractions is a bit tricky
 		nuclide_fractions = {nuclide: zeros(num_layers) for nuclide in ["H", "D", "T", "³He", "¹²C"]}
@@ -198,7 +199,8 @@ def prepare_iris_inputs(name: str, stopping_power_mode: int) -> str:
 		time_bin_indices, key_time_indices = select_key_indices(burn_rate, 21)
 		num_fine_times = burn_rate.size
 		num_times = key_time_indices.size
-		zone_mass = file["zone/zone_volume"][:, 0]*file["zone/mass_density"][:, 0]
+		zone_height = diff(file["node/boundary_position"][:, :], axis=0)
+		zone_mass = file["zone/mass_density"][:, 0]*zone_height[:, 0]
 		key_node_indices, _ = select_key_indices(zone_mass, 50)
 		# make sure layers don't get mixed together at the coarsened zone boundaries
 		for i in range(num_layers):
@@ -213,17 +215,24 @@ def prepare_iris_inputs(name: str, stopping_power_mode: int) -> str:
 		# then rebin the quantities to the new lower resolution
 		time = file["time/absolute_time"][key_time_indices]
 		node_position = file["node/boundary_position"][:, key_time_indices][key_node_indices, :]
-		mass_density = rebin(file["zone/mass_density"][:, key_time_indices], key_node_indices, axis=0)
-		ion_temperature = rebin(file["zone/mass_density"][:, key_time_indices], key_node_indices, axis=0)
-		electron_temperature = rebin(file["zone/mass_density"][:, key_time_indices], key_node_indices, axis=0)
-		average_ionization = rebin(file["zone/mass_density"][:, key_time_indices], key_node_indices, axis=0)
-		velocity = rebin(file["zone/mass_density"][:, key_time_indices], key_node_indices, axis=0)
+		node_velocity = file["node/velocity"][:, key_time_indices][key_node_indices, :]
+		zone_velocity = (node_velocity[0:-1] + node_velocity[1:])/2  # convert node velocity to zone velocity
+		mass_density = rebin(file["zone/mass_density"][:, key_time_indices], key_node_indices,
+		                     axis=0, weights=zone_height[:, key_time_indices])
+		ion_temperature = rebin(file["zone/ion_temperature"][:, key_time_indices], key_node_indices,
+		                        axis=0, weights=zone_height[:, key_time_indices])
+		electron_temperature = rebin(file["zone/electron_temperature"][:, key_time_indices], key_node_indices,
+		                             axis=0, weights=zone_height[:, key_time_indices])
+		average_ionization = rebin(file["zone/average_z"][:, key_time_indices], key_node_indices,
+		                           axis=0, weights=zone_height[:, key_time_indices])
+		average_ionization2 = rebin(file["zone/average_z2"][:, key_time_indices], key_node_indices,
+		                            axis=0, weights=zone_height[:, key_time_indices])
 		material_fraction = identity(num_layers)[:, layer_index]  # this should be a sort of identity matrix
 		# reactions in particular are tricky
 		reactions = {}
 		for key, cumulative_reactions in [("DT", file["zone/cumulative_dtn_yield"][:, :]), ("DD", file["zone/cumulative_ddn_yield"][:, :])]:
 			# first convert to actual cumulative reactions at each time because I find the indexing easier that way
-			cumulative_reactions = cumsum(cumulative_reactions, axis=1)
+			cumulative_reactions = cumsum(cumulative_reactions.astype(float64), axis=1)
 			# reduce the cumulative reactions to the key time bins
 			cumulative_reactions = (
 				cumulative_reactions[:, maximum(time_bin_indices - 1, 0)] +
@@ -258,8 +267,8 @@ def prepare_iris_inputs(name: str, stopping_power_mode: int) -> str:
 			file["mass_density"] = mass_density[newaxis, newaxis, :, j]/1e-3  # kg/m^3
 			file["ion_temperature"] = ion_temperature[newaxis, newaxis, :, j]*keV  # J
 			file["electron_temperature"] = electron_temperature[newaxis, newaxis, :, j]*keV  # J
-			file["z_effective"] = average_ionization[newaxis, newaxis, :, j]
-			file["r_velocity"] = velocity[newaxis, newaxis, :, j]*1e-2  # m/s
+			file["z_effective"] = (average_ionization2/average_ionization)[newaxis, newaxis, :, j]
+			file["r_velocity"] = zone_velocity[newaxis, newaxis, :, j]*1e-2  # m/s
 			file["t_velocity"] = zeros((1, 1, num_zones))
 			file["p_velocity"] = zeros((1, 1, num_zones))
 			file["material_fraction"] = material_fraction[:, newaxis, newaxis, :]
@@ -281,7 +290,7 @@ def prepare_iris_inputs(name: str, stopping_power_mode: int) -> str:
 			"fill helium3 fraction": f"{nuclide_fractions['³He'][0]:.6f}",
 			"fill carbon fraction": f"{nuclide_fractions['¹²C'][0]:.6f}",
 			"fill mean atomic mass": f"{mean_atomic_masses[0]*1.66054e-27:.8g}",  # kg
-			"fill max atomic number": f"{max_atomic_numbers[0]:.8g}",
+			"fill max ionization": f"{mean_atomic_numbers[0]:.8g}",
 			"shell material code": f"{material_codes[1]:d}",
 			"shell hydrogen fraction": f"{nuclide_fractions['H'][1]:.6f}",
 			"shell deuterium fraction": f"{nuclide_fractions['D'][1]:.6f}",
@@ -289,7 +298,7 @@ def prepare_iris_inputs(name: str, stopping_power_mode: int) -> str:
 			"shell helium3 fraction": f"{nuclide_fractions['³He'][1]:.6f}",
 			"shell carbon fraction": f"{nuclide_fractions['¹²C'][1]:.6f}",
 			"shell mean atomic mass": f"{mean_atomic_masses[1]*1.66054e-27:.8g}",  # kg
-			"shell max atomic number": f"{max_atomic_numbers[1]}",
+			"shell max ionization": f"{mean_atomic_numbers[1]}",
 			"stopping power model": f"{stopping_power_mode:d}",
 			"directory": f"{current_working_directory}/{directory}",
 		},
