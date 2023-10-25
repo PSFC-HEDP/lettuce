@@ -150,3 +150,26 @@ The columns are as follows:
   The burn-averaged ρR, in milligrams per square centimeter.
 - **ion temperature**  
   The burn-averaged ion temperature, in kiloelectron-volts.
+
+## some notes on LILAC and IRIS
+
+Do not call LILAC with a command-line argument!  It will break all of the filenames.
+
+Do not set both `gas_press` and `mat_dens` in a single layer!  LILAC will not respect either of them.
+
+Do not use `zoning='user'` with `feather=.false.`!  This will cause bizarre spline zoning that results in early termination.
+Setting `feather=.true.`, even if `xfactor=1`, results in correct equal-mass zoning (or equal-thickness zoning if `eqrad=.true.`).
+Note that only the shell needs to have `feather=.true.`.  For some reason it's fine if `feather=.false.` in the fill.
+No, I don't know what "feathering" is so please stop asking.
+
+Not all materials are listed in the user guide.
+You can get an idea for what materials exist by looking at the opacity tables in `/lle/data/opacity_tables`,
+but note that those won't give you accurate mass numbers or default densities.
+The complete list of D³He materials is given, to the best of my ability, in [`material.py`](python/material.py).
+
+The user guide gives a few ways to make custom materials, none of which work.
+The real way to make a custom material is
+
+The IRIS documentation doesn't state what units the inputs must be in.
+In reality they're all SI (velocity in m/s, density in kg/m³, and cetera).
+Note that temperature is in J, not K.
