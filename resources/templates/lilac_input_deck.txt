@@ -42,10 +42,8 @@
     icut = 100000,  ! terminate this many time-steps after min-volume
     tcut = 0.3,  ! terminate at 300 ps
     tpostf = 5.0, 2.0,
-    tpostsw = 0.5869999999999999,
+    tpostsw = <<laser off time>>,  ! ns
     idiagn = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  ! no diagnostics
-    sbs_diag = .true.,  ! yes sbs diagnostic output
-    tpd_diag = .true.,  ! yes TPD diagnostic output
     ippost(13) = 2,  ! output as HDF5
 /
 

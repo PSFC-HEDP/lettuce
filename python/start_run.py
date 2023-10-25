@@ -68,7 +68,7 @@ def start_run(code: str, name: str, stopping_power_mode: int, force: bool) -> No
 		"status changed": Timestamp.now(),
 		"slurm ID": slurm_ID,
 	})
-	log_message(f"{code} run '{name}' (slurm ID {slurm_ID}) is submitted to slurm.")
+	log_message(f"{code} run '{name}' is submitted to slurm (slurm ID {slurm_ID}).")
 
 
 def prepare_lilac_inputs(name: str) -> str:
@@ -85,37 +85,43 @@ def prepare_lilac_inputs(name: str) -> str:
 	if inputs.ndim != 1:
 		raise KeyError(f"run '{name}' appears more than once in the run_inputs.csv file!")
 
+	# save all of the inputs and the script to the run directory
+	os.makedirs(directory, exist_ok=True)
+
 	# load the laser data
 	pulse_time, pulse_power = load_pulse_shape(inputs["pulse shape"], inputs["laser energy"])
-	beam_radius, beam_intensity = load_beam_profile(inputs["beam profile"])
-
 	if notnull(inputs["laser degradation"]):
 		pulse_power = degrade_laser_pulse(pulse_power, inputs["laser degradation"])
+	np.savetxt(f"{directory}/pulse_shape.txt",
+	           np.stack([pulse_time, pulse_power], axis=1), delimiter=",")  # type: ignore
+
+	beam_radius, beam_intensity = load_beam_profile(inputs["beam profile"])
+	np.savetxt(f"{directory}/beam_profile.txt",
+	           np.stack([beam_radius, beam_intensity], axis=1),
+	           delimiter=" ", fmt="%.6f")  # type: ignore
 
 	# parse the materials
 	shell_material = get_solid_material_from_name(inputs["shell material"])
 	fill_material = get_gas_material_from_components(parse_gas_components(inputs["fill"]))
 
-	# compose the input deck and bash script
-	input_deck = build_lilac_input_deck(name, inputs, fill_material, shell_material)
-	bash_script = build_lilac_bash_script(name)
+	pulse_end_time = pulse_time[pulse_power >= 1/2*np.max(pulse_power)][-1]
 
-	# save all of the inputs and the script to the run directory
-	os.makedirs(directory, exist_ok=True)
+	# compose the input deck
+	input_deck = build_lilac_input_deck(name, inputs, pulse_end_time, fill_material, shell_material)
 	with open(f"{directory}/lilac_data_input.txt", "w") as file:
 		file.write(input_deck)
+
+	# compose the bash script
+	bash_script = build_lilac_bash_script(name)
 	with open(f"{directory}/run.sh", "w") as file:
 		file.write(bash_script)
-	np.savetxt(f"{directory}/pulse_shape.txt",
-	           np.stack([pulse_time, pulse_power], axis=1), delimiter=",")  # type: ignore
-	np.savetxt(f"{directory}/beam_profile.txt",
-	           np.stack([beam_radius, beam_intensity], axis=1), delimiter=" ")  # type: ignore
 
 	return f"{directory}/run.sh"
 
 
 def build_lilac_input_deck(
-		name: str, inputs: Series, fill_material: Material, shell_material: Material) -> str:
+		name: str, inputs: Series, laser_off_time: float,
+		fill_material: Material, shell_material: Material) -> str:
 	""" construct the input deck corresponding to the given inputs and return it as a str """
 	return fill_in_template(
 		"lilac_input_deck.txt",
@@ -127,6 +133,7 @@ def build_lilac_input_deck(
 			"absorption fraction": f"{inputs['absorption fraction']:.4f}",
 			"nonthermal model": "none" if inputs["flux limiter"] > 0 else "vgon",
 			"flux limiter": f"{inputs['flux limiter']:.3f}" if inputs["flux limiter"] > 0 else "0",
+			"laser off time": f"{laser_off_time:.3f}",
 			# first prof namelist (fill)
 			"fill material code": f"{fill_material.material_code:d}",
 			"fill protium percentage": f"{fill_material.protium_fraction*100:.2f}",
