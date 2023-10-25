@@ -1,5 +1,6 @@
 import os.path
 from argparse import ArgumentParser
+from datetime import datetime
 
 import h5py
 import numpy as np
@@ -11,7 +12,7 @@ from numpy.typing import NDArray
 from pandas import Timestamp
 from scipy import integrate
 
-from material import nuclide_symbol
+from python.material import nuclide_symbol
 from python.data_io import write_row_to_outputs_table
 from python.utilities import apparent_brightness, width, gradient
 
@@ -222,7 +223,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 	ax_top_rite = ax_top_left.twinx()
 	ax_bottom.set_facecolor("k")
 	mesh = ax_bottom.pcolormesh(node_time, node_position, intertime_ion_temperature,
-	                            cmap="inferno", norm=colors.LogNorm(vmin=.05, vmax=50))
+	                            cmap="inferno", norm=colors.LogNorm(vmin=.02, vmax=20))
 	for i in range(num_layers):
 		ax_bottom.plot(time, interface_position[i, :], 'w-', linewidth=1)
 	ax_bottom.set_xlim(0, min(np.max(time), bang_time[main_reaction] + 1))
@@ -299,6 +300,10 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 	pdf.set_font("Noto", "B", 20)
 	pdf.set_title(f"{name} LILAC summary")
 	pdf.write(15, f"{name} LILAC summary")
+	# put the date in the upper corner
+	pdf.set_font("Noto", "", 12)
+	pdf.set_x(-55)
+	pdf.write(15, datetime.today().strftime("%Y %b %d %H:%M:%S"))
 	pdf.ln()
 	# list the layers
 	pdf.set_font("Noto", "B", 16)
@@ -313,7 +318,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 			component_descriptions.append(
 				f"{layer.component_abundances[i]:.1%} {nuclide_symbol(layer.atomic_numbers[i], layer.mass_numbers[i])}")
 		layer_description = f"{layer.name}: {layer.thickness:.1f} μm {layer.material_name} ({' + '.join(component_descriptions)}) at {layer.density:.2g} g/cm³"
-		pdf.set_x(25)
+		pdf.set_x(15)
 		pdf.write(10, layer_description)
 		pdf.ln()
 	# include the plots
@@ -352,6 +357,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 			pdf.set_font("Noto", "", 16)
 			for label, values, foremat, units in averaged_quantities:
 				if weighting in values:
+					pdf.set_x(15)
 					pdf.write(
 						10, f"{label}: {format(values[weighting], foremat)} {units}")
 					pdf.ln()
