@@ -145,7 +145,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 		Te = electron_temperature*kiloelectronvolt
 		e = 1.60e-19*coulomb  # (we're using units for just this part)
 		ɛ0 = 8.85e-12*farad/meter
-		ħ = 1.054e-32*joule*second
+		ħ = 1.054e-34*joule*second
 		me = 9.11e-31*kilogram
 		coulomb_energy = e**2/(4*pi*ɛ0)*(4/3*pi*ne)**(1/3)
 		fermi_energy = ħ**2/(2*me)*(3*pi**2*ne)**(2/3)
