@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=IRIS_<<name>>
-#SBATCH --time=20:00:00
+#SBATCH --time=10:00:00
 #SBATCH --partition=blizzard
 #SBATCH --ntasks=16
 #SBATCH --mem-per-cpu=4GB
@@ -20,7 +20,7 @@ echo "IRIS run '<<name>>' starts."
 echo "$(date +'%m-%d %H:%M') | IRIS run '<<name>>' starts." >> "<<root>>/runs.log"
 
 # run IRIS
-timeout 19h iris
+timeout 9h iris
 exit_code=$?
 
 # figure out if the run was successful
