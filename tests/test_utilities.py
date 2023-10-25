@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.testing as npt
 import pytest
-from numpy import array, concatenate, inf
+from numpy import array, concatenate, inf, ones
 
 from python.utilities import gradient, width, apparent_brightness, degrade_laser_pulse, to_superscript, \
 	select_key_indices, rebin
@@ -72,12 +72,12 @@ def test_rebin():
 	npt.assert_allclose(
 		rebin(
 			array([[6.], [2.], [7.], [3.], [1.], [8.], [5.], [3.], [0.], [9.]]),
-			array([0, 3, 5, 10]), axis=0),
+			array([0, 3, 5, 10]), axis=0, weights=ones((10, 1))),
 		array([[5.], [2.], [5.]]))
 	with pytest.raises(ValueError):
 		rebin(
 			array([[6.], [2.], [7.], [3.], [1.], [8.], [5.], [3.], [0.], [9.]]),
-			array([3, 5, 11]), axis=0)
+			array([3, 5, 11]), axis=0, weights=ones((10, 1)))
 
 
 def test_apparent_brightness():
