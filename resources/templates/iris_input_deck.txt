@@ -19,13 +19,13 @@
     material_code(1) = <<fill material code>>
     material_fraction(1,:) = <<fill hydrogen fraction>>, <<fill deuterium fraction>>, <<fill tritium fraction>>, <<fill helium3 fraction>>, <<fill carbon fraction>>
     atomic_weight(1) = <<fill mean atomic mass>>  ! kg
-    zmax(1) = <<fill max atomic number>>  ! e
+    zmax(1) = <<fill max ionization>>  ! e
 
     ! SHELL MATERIAL DETAILS
     material_code(1) = <<shell material code>>
     material_fraction(1,:) = <<shell hydrogen fraction>>, <<shell deuterium fraction>>, <<shell tritium fraction>>, <<shell helium3 fraction>>, <<shell carbon fraction>>
     atomic_weight(1) = <<shell mean atomic mass>>  ! kg
-    zmax(1) = <<shell max atomic number>>  ! e
+    zmax(1) = <<shell max ionization>>  ! e
 
     ! ALUMINUM MATERIAL DETAILS
     material_code(1) = 13
