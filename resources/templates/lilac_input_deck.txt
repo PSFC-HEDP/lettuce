@@ -71,7 +71,7 @@
     matcod = <<shell material code>>,
     phydr = <<shell protium percentage>>,
     ptrit = <<shell tritium percentage>>,
-    ncell = 300,
+    ncell = 250,
     thick = <<shell thickness>>,  ! um
 <<if density specified>>
     dens_mat = <<shell density>>,  ! g/cm3
@@ -81,7 +81,7 @@
     izion = <<shell ionization option>>,
     iopac = <<shell opacity option>>,
     eqrad = .false.,
-    feather = .false.,
+    feather = .true.,
     opgrp = '48_50x50Dt',
 /
 
@@ -96,7 +96,7 @@
     izion = 2,  ! average-ion model
     iopac = 1,  ! astrophysical opacity table
     eqrad = .false.,
-    feather = .false.,
+    feather = .true.,
     opgrp = '48_50x50Dt',
 /
 <<endif aluminum>>
