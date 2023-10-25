@@ -36,9 +36,9 @@
 
 ! PHYSICS OPTIONS
 &fusion
-    minimum_virtual_reaction_particles(1) = 1000000
-    minimum_virtual_reaction_particles(2) = 1000000
-    minimum_virtual_reaction_particles(3) = 1000000
+    minimum_virtual_reaction_particles(1) = 100000
+    minimum_virtual_reaction_particles(2) = 10000
+    minimum_virtual_reaction_particles(3) = 10000
 
     velocity_shift = .true.
 
