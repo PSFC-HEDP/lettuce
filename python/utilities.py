@@ -122,43 +122,23 @@ def rebin(values: NDArray[float], bin_indices: NDArray[int], weights: NDArray[fl
 	return new_values
 
 
-def apparent_brightness(ionization: NDArray[float], electron_number_density: NDArray[float],
-                        electron_temperature: NDArray[float], energy_cutoff: float, show_plot=False
+def apparent_brightness(electron_number_density: NDArray[float],
+                        electron_temperature: NDArray[float], energy_cutoff: float
                         ) -> NDArray[float]:
 	""" how much of the emission would be detected by an image plate
 		:param ionization: the spatio-temporally resolved average ion charge
 		:param electron_number_density: the spacio-temporally resolved electron number density (cm^-3)
 		:param electron_temperature: the spacio-temporally resolved electron temperature (keV)
 		:param energy_cutoff: x-ray energies will be integrated from this to positive infinity
-		:param show_plot: whether to plot and show a spectrum before returning
-		:return: the spacio-temporally resolved
+		:return: the spacio-temporally resolved power per unit volume (units unknown)
 	"""
-	# account for sensitivity and transmission
-	hν = expand_dims(geomspace(1e0, 1e3, 61), axis=tuple(1 + arange(ionization.ndim)))  # (keV)
-
 	# catch arithmetic errors before they happen
-	if not np.all(isfinite(ionization) & (ionization > 0)):
-		raise ValueError(f"some inputs to apparent_brightness() were invalid: Z={ionization:.5g}")
 	if not np.all(isfinite(electron_number_density) & (electron_number_density >= 0)):
 		raise ValueError(f"some inputs to apparent_brightness() were invalid: ne={electron_number_density:.5g}cm^-3")
 	if not np.all(isfinite(electron_temperature) & (electron_temperature > 0)):
 		raise ValueError(f"some inputs to apparent_brightness() were invalid: Te={electron_temperature:.5g}keV")
 
 	# finally, account for the original spectrum (thus expanding the array to 3d)
-	Z = ionization
-	ne = electron_number_density
-	ni = ne/Z
-	Te = electron_temperature
-	emission = Z*ni*ne/sqrt(Te)*exp(-hν/Te)
-
-	# plot the curve for my benefit
-	if show_plot:
-		plt.plot(hν, emission)
-		plt.xscale("log")
-		plt.xlabel(f"Energy (keV)")
-		plt.ylabel(f"PSL (?)")
-		plt.show()
-
-	# finally, integrate over energy
-	return integrate.trapezoid(
-		x=hν, y=where(hν > energy_cutoff, emission, 0), axis=0)
+	return (electron_number_density**2 *
+	        sqrt(electron_temperature) *
+	        exp(-energy_cutoff/electron_temperature))
