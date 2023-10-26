@@ -85,7 +85,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 		time = time - time[start_index]
 
 		# pull out the different cumulative yield arrays
-		reactions = {"DT-n", "D3He-p", "DD-n"}
+		reactions = ["DT-n", "D3He-p", "DD-n"]
 		# note that LILAC calls these arrays "cumulative" but they're literally just not cumulative.
 		# I convert them to cumulative because I think that's the most numericly precise way to do it.
 		zone_cumulative_yield = {
@@ -135,11 +135,20 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 		electron_density = solution["zone/electron_density"][:, :].astype(float64)  # (cm^-3)
 		ionization = solution["zone/average_z"][:, :].astype(float64)
 
-		# calculate brems emission to use as a weighting thing
-		brightness = {}
+		# calculate the x-ray emission averaged temperature
+		xray_energy_bands = []
+		average_electron_density, average_electron_temperature, average_ionization = {}, {}, {}
 		for cutoff in [2., 10., 50.]:  # (keV)
-			brightness[f"{cutoff:.0f}+ keV x-ray"] = apparent_brightness(
-				ionization, electron_density, electron_temperature, cutoff)
+			key = f"{cutoff:.0f}+ keV x-ray"
+			weights = solution["zone/zone_volume"][:, :]*apparent_brightness(
+				electron_density, electron_temperature, cutoff)
+			if np.any(weights > 0):
+				xray_energy_bands.append(key)
+				bang_index[key] = argmax(np.sum(weights, axis=0))
+				bang_time[key] = time[bang_index[key]]
+				average_electron_temperature[key] = average(electron_temperature, weights=weights)
+				average_electron_density[key] = average(electron_density, weights=weights)
+				average_ionization[key] = average(ionization, weights=weights)
 
 		# calculate coupling and degeneracy parameters
 		ne = electron_density*centimeter**-3
@@ -163,15 +172,6 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 			areal_density[interface_name] = np.sum(
 				(mass_density*zone_height)[start:end, :], axis=0)*1e-4*1e3  # (mg/cm^2)
 		areal_density["total"] = areal_density["fill"] + areal_density["shell"]
-
-	# calculate the x-ray emission averaged temperature
-	average_electron_density, average_electron_temperature = {}, {}
-	for filter_stack in brightness.keys():
-		if np.any(brightness[filter_stack] > 0):
-			average_electron_temperature[filter_stack] = average(
-				electron_temperature, weights=brightness[filter_stack])
-			average_electron_density[filter_stack] = average(
-				electron_density, weights=brightness[filter_stack])
 
 	# calculate the stopping-averaged coupling parameter
 	average_coupling, average_degeneracy = {}, {}
@@ -248,10 +248,11 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 	ax_top_left.set_ylim(0, None)
 	ax_top_left.set_ylabel("Power (TW)")
 	ax_top_left.locator_params(steps=[1, 2, 5, 10])
+	ax_top_left.grid(axis="x")
 	ax_top_rite.set_yscale("log")
 	ax_top_rite.set_ylim(peak*1.5e-4, peak*1.5)
 	ax_top_rite.set_ylabel("Yield (ns^-1)")
-	ax_top_rite.grid()
+	ax_top_rite.grid(axis="y")
 	ax_top_rite.legend(curves, labels, framealpha=1, fancybox=False)
 	fig.tight_layout()
 	fig.savefig(f"{directory}/time_plot.eps")
@@ -345,11 +346,12 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 		("T_ion", average_ion_temperature, ".2f", "keV"),
 		("T_elec", average_electron_temperature, ".2f", "keV"),
 		("n_elec", average_electron_density, ".3g", "cm^-3"),
+		("Z_eff", average_ionization, ".3f", ""),
 		("Coupling", average_coupling, ".3g", ""),
 		("Degeneracy", average_degeneracy, ".3g", ""),
 		("ρR", average_areal_density, ".1f", "mg/cm^2"),
 	]
-	for weighting in list(reactions) + ["ko-d", "stopping"] + list(brightness.keys()):
+	for weighting in reactions + ["ko-d"] + xray_energy_bands + ["stopping"]:
 		if weighting not in total_yield or total_yield[weighting] > 0:
 			pdf.set_font("Noto", "B", 16)
 			pdf.write(10, f"{weighting} quantities")
