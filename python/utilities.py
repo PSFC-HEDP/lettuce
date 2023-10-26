@@ -126,7 +126,6 @@ def apparent_brightness(electron_number_density: NDArray[float],
                         electron_temperature: NDArray[float], energy_cutoff: float
                         ) -> NDArray[float]:
 	""" how much of the emission would be detected by an image plate
-		:param ionization: the spatio-temporally resolved average ion charge
 		:param electron_number_density: the spacio-temporally resolved electron number density (cm^-3)
 		:param electron_temperature: the spacio-temporally resolved electron temperature (keV)
 		:param energy_cutoff: x-ray energies will be integrated from this to positive infinity
