@@ -81,7 +81,6 @@ def test_rebin():
 
 
 def test_apparent_brightness():
-	Z = array(1.5)
 	ne = array(1e+20)
 	Te = array(3)
 	baseline = apparent_brightness(ne, Te, 0)
