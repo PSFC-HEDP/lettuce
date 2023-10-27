@@ -1,10 +1,8 @@
 import numpy as np
-from matplotlib import pyplot as plt
-from numpy import expand_dims, geomspace, arange, interp, exp, sqrt, isfinite, inf, cumsum, where, concatenate, \
+from numpy import arange, interp, exp, sqrt, isfinite, inf, cumsum, where, concatenate, \
 	linspace, unique, \
 	zeros, empty, floor, histogram, float64
 from numpy.typing import NDArray
-from scipy import integrate
 
 
 def degrade_laser_pulse(original_pulse: NDArray[float], factor: float) -> NDArray[float]:

@@ -97,7 +97,7 @@ def prepare_lilac_inputs(name: str) -> str:
 
 	beam_radius, beam_intensity = load_beam_profile(inputs["beam profile"])
 	np.savetxt(f"{directory}/beam_profile.txt",
-	           np.stack([beam_radius, beam_intensity], axis=1),
+	           np.stack([beam_radius, beam_intensity], axis=1),  # type: ignore
 	           delimiter=" ", fmt="%.6f")  # type: ignore
 
 	# parse the materials
