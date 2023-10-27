@@ -3,7 +3,7 @@ import numpy.testing as npt
 import pytest
 from numpy import array, concatenate, inf, ones
 
-from python.utilities import gradient, width, apparent_brightness, degrade_laser_pulse, to_superscript, \
+from utilities import gradient, width, apparent_brightness, degrade_laser_pulse, to_superscript, \
 	select_key_indices, rebin
 
 

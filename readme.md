@@ -1,6 +1,6 @@
 # Lettuce
 
-[![continuous integration](https://github.com/PSFC-HEDP/lettuce/actions/workflows/main.yml/badge.svg)](https://github.com/PSFC-HEDP/lettuce/actions/workflows/main.yml)
+[![test status](https://github.com/PSFC-HEDP/lettuce/actions/workflows/main.yml/badge.svg)](https://github.com/PSFC-HEDP/lettuce/actions/workflows/main.yml)
 
 This is a suite of Bash and Python scripts for running LILAC and IRIS from the command line.
 
@@ -59,6 +59,8 @@ pip install -r requirements.txt
 
 ## Recommended workflow
 
+### LILAC
+
 The first step is to describe the run you want to do in `run_inputs.csv`.
 See [§ Run inputs](#Run inputs) for more information.
 
@@ -78,6 +80,8 @@ This will print out all of the LILAC that is currently queued or running.
 Once the LILAC job finishes, it will automatically post-process the result
 and generate a PDF containing numbers of interest in its run directory.
 
+### IRIS
+
 After LILAC is done, you can run IRIS.
 Eventually it would be nice if it automatically ran IRIS after LILAC, but for now it's manual.
 To start an IRIS run, call
@@ -93,6 +97,17 @@ This will print out all of the IRIS that is currently queued or running.
 
 Once the IRIS job finishes, it will automatically post-process the result
 and generate a PDF containing spectra and images in its run directory.
+
+### Unit tests
+
+If you want to run unit tests, mind the PythonPath.  On Unix the command is
+~~~bash
+PYTHONPATH=python python -m pytest
+~~~
+On Windows PowerShell the command is
+~~~powershell
+$env:pythonpath="python"; python -m pytest
+~~~
 
 ## Run inputs
 

@@ -1,7 +1,7 @@
 import pytest
 from numpy import nan
 
-from python.material import find_best_D3He_material_code, get_solid_material_from_name, Material, \
+from material import find_best_D3He_material_code, get_solid_material_from_name, Material, \
 	get_gas_material_from_components, nuclide_symbol
 
 
