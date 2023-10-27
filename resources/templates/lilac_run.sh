@@ -69,6 +69,6 @@ fi
 # call the postprocessing script to generate the summary PDF
 cd "<<root>>" || exit 1
 module load anaconda3/2023.07-2
-PYTHONPATH=. python3 python/postprocess_lilac_run.py "<<name>>" --status="${result}"
+python3 python/postprocess_lilac_run.py "<<name>>" --status="${result}"
 
 exit ${exit_code}

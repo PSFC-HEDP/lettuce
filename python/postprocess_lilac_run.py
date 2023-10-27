@@ -12,9 +12,9 @@ from numpy.typing import NDArray
 from pandas import Timestamp
 from scipy import integrate
 
-from python.material import nuclide_symbol
-from python.data_io import write_row_to_outputs_table
-from python.utilities import apparent_brightness, width, gradient
+from material import nuclide_symbol
+from data_io import write_row_to_outputs_table
+from utilities import apparent_brightness, width, gradient
 
 plt.rcParams["font.size"] = 11
 

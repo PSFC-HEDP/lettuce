@@ -12,10 +12,10 @@ from numpy import pi, zeros, append, sort, newaxis, digitize, stack, histogram, 
 	empty, maximum, minimum, cumsum, float64, average
 from pandas import Series, Timestamp, notnull
 
-from python.data_io import load_pulse_shape, parse_gas_components, load_beam_profile, load_inputs_table, \
+from data_io import load_pulse_shape, parse_gas_components, load_beam_profile, load_inputs_table, \
 	load_outputs_table, log_message, fill_in_template, write_row_to_outputs_table
-from python.material import Material, get_solid_material_from_name, get_gas_material_from_components, nuclide_symbol
-from python.utilities import degrade_laser_pulse, gradient, select_key_indices, rebin
+from material import Material, get_solid_material_from_name, get_gas_material_from_components, nuclide_symbol
+from utilities import degrade_laser_pulse, gradient, select_key_indices, rebin
 
 
 def start_run(code: str, name: str, stopping_power_mode: int, force: bool) -> None:

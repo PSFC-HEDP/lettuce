@@ -3,7 +3,7 @@ import numpy.testing as npt
 import pytest
 from pandas import isnull
 
-from python.data_io import load_pulse_shape, \
+from data_io import load_pulse_shape, \
 	parse_gas_components, load_inputs_table, load_outputs_table, log_message, \
 	fill_in_template, write_row_to_outputs_table
 

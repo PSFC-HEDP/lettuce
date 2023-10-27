@@ -4,7 +4,7 @@ from copy import copy
 from collections import defaultdict
 from typing import Optional, Union
 
-from python.utilities import to_superscript
+from utilities import to_superscript
 
 
 class Material:
