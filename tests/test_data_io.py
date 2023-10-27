@@ -18,7 +18,7 @@ def test_load_outputs_table():
 	assert outputs_table["yield"].dtype == float
 
 
-def test_write_row_to_ouputs_table():
+def test_write_row_to_outputs_table():
 	with pytest.raises(KeyError):
 		write_row_to_outputs_table({"yield": 4e17})
 	with pytest.raises(KeyError):

@@ -156,7 +156,7 @@ def load_pulse_shape(pulse_shape_name: str, total_energy: float) -> tuple[NDArra
 	if len(data) != 1:
 		raise ValueError(f"the file '{filepath}' seems to contain multiple pulse "
 		                 f"shapes.  please, when you download pulse shapes from OmegaOps, make sure you only have one "
-		                 f"pusle shape activated each time you download a file.")
+		                 f"pulse shape activated each time you download a file.")
 	if data[0]["Pulse"] != pulse_shape_name:
 		raise ValueError(f"the file '{filepath}' seems to contain the information "
 		                 f"for pulse shape {data[0]['Pulse']} instead of {pulse_shape_name}.  Please rename it "
