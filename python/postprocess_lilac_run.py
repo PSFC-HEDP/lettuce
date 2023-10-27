@@ -116,7 +116,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 		total_yield_rate["ko-d"] = total_yield_rate["DT-n"]*knockon_cross_section*deuterium_areal_density*1.1  # deuteron/ns
 		total_yield["ko-d"] = integrate.trapezoid(x=time, y=total_yield_rate["ko-d"])
 
-		main_charged_particle = max(["D3He-p", "ko-d"], key=lambda particle: total_yield[particle])
+		main_charged_particle = max(["D3He-p", "DD-n", "ko-d"], key=lambda particle: total_yield[particle])
 
 		# calculate bang-time
 		bang_index, bang_time, burn_width = {}, {}, {}
@@ -262,8 +262,8 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 	fig, (ax_top, ax_T) = plt.subplots(
 		2, 1, sharex="all", gridspec_kw=dict(hspace=0), figsize=(140*mm, 100*mm), facecolor="none")
 	i = bang_index[main_reaction]
-	ax_T.plot(zone_position[:, i], Te[:, i], "C1--")
-	ax_T.set_ylabel("$T_\\mathrm{e}$ (keV)")
+	ax_T.plot(zone_position[:, i], ion_temperature[:, i], "C1--")
+	ax_T.set_ylabel("$T_\\mathrm{i}$ (keV)")
 	ax_T.set_ylim(0, None)
 	ax_T.grid()
 	ax_T.locator_params(steps=[1, 2, 5, 10])
@@ -275,8 +275,8 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 	ax_ρ.locator_params(steps=[1, 2, 5, 10])
 
 	# plot the coupling and degeneracy parameters
-	ax_top.plot(zone_position[:, i], coupling[:, i], "C0-.", label="Γ")
-	ax_top.plot(zone_position[:, i], degeneracy[:, i], "C2--", label="ϴ")
+	ax_top.plot(zone_position[:, i], coupling[:, i], "C0-.", label=r"$\Gamma_\mathrm{e}$")
+	ax_top.plot(zone_position[:, i], degeneracy[:, i], "C2--", label=r"$\Theta_\mathrm{e}$")
 	ax_top.legend(framealpha=1, fancybox=False)
 	ax_top.set_xlabel("Radius (μm)")
 	peak_mass_density = np.max(mass_density[:, i])
@@ -317,7 +317,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 			if len(layer.component_names[i]) == 0:
 				break
 			component_descriptions.append(
-				f"{layer.component_abundances[i]:.1%} {nuclide_symbol(layer.atomic_numbers[i], layer.mass_numbers[i])}")
+				f"{layer.component_abundances[i]:.0%} {nuclide_symbol(layer.atomic_numbers[i], layer.mass_numbers[i])}")
 		layer_description = f"{layer.name}: {layer.thickness:.1f} μm {layer.material_name} ({' + '.join(component_descriptions)}) at {layer.density:.2g} g/cm³"
 		pdf.set_x(15)
 		pdf.write(10, layer_description)
@@ -331,10 +331,13 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 	pdf.write(10, f"Overview quantities")
 	pdf.ln()
 	pdf.set_font("Noto", "", 16)
+	pdf.set_x(15)
 	pdf.write(10, f"Laser energy: {integrate.trapezoid(x=time, y=laser_power):.3f} kJ")
 	pdf.ln()
+	pdf.set_x(15)
 	pdf.write(10, f"Convergence ratio: {convergence_ratio:.1f}")
 	pdf.ln()
+	pdf.set_x(15)
 	pdf.write(10, f"Thermal transport: {thermal_transport_model:s}")
 	pdf.ln()
 	pdf.ln()
