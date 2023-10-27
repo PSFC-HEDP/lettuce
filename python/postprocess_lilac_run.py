@@ -137,7 +137,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 
 		# calculate the x-ray emission averaged temperature
 		xray_energy_bands = []
-		average_electron_density, average_electron_temperature, average_ionization = {}, {}, {}
+		average_mass_density, average_electron_temperature, average_ionization = {}, {}, {}
 		for cutoff in [2., 10., 50.]:  # (keV)
 			key = f"{cutoff:.0f}+ keV x-ray"
 			weights = solution["zone/zone_volume"][:, :]*apparent_brightness(
@@ -147,7 +147,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 				bang_index[key] = argmax(np.sum(weights, axis=0))
 				bang_time[key] = time[bang_index[key]]
 				average_electron_temperature[key] = average(electron_temperature, weights=weights)
-				average_electron_density[key] = average(electron_density, weights=weights)
+				average_mass_density[key] = average(mass_density, weights=weights)
 				average_ionization[key] = average(ionization, weights=weights)
 
 		# calculate coupling and degeneracy parameters
@@ -181,7 +181,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 	weights = time_weight*space_weight
 	if np.any(weights > 0):
 		average_electron_temperature["stopping"] = average(electron_temperature, weights=weights)
-		average_electron_density["stopping"] = average(electron_density, weights=weights)
+		average_mass_density["stopping"] = average(mass_density, weights=weights)
 		average_coupling["stopping"] = exp(average(log(coupling), weights=weights))
 		average_degeneracy["stopping"] = exp(average(log(degeneracy), weights=weights))
 
@@ -251,7 +251,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 	ax_top_left.grid(axis="x")
 	ax_top_rite.set_yscale("log")
 	ax_top_rite.set_ylim(peak*1.5e-4, peak*1.5)
-	ax_top_rite.set_ylabel("Yield (ns^-1)")
+	ax_top_rite.set_ylabel("Yield (ns$^{-1}$)")
 	ax_top_rite.grid(axis="y")
 	ax_top_rite.legend(curves, labels, framealpha=1, fancybox=False)
 	fig.tight_layout()
@@ -348,11 +348,11 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 		("Burn-width", burn_width, ".0f", "ps"),
 		("T_ion", average_ion_temperature, ".2f", "keV"),
 		("T_elec", average_electron_temperature, ".2f", "keV"),
-		("n_elec", average_electron_density, ".3g", "cm^-3"),
+		("ρ", average_mass_density, ".3g", "g/cm³"),
 		("Z_eff", average_ionization, ".3f", ""),
 		("Coupling", average_coupling, ".3g", ""),
 		("Degeneracy", average_degeneracy, ".3g", ""),
-		("ρR", average_areal_density, ".1f", "mg/cm^2"),
+		("ρR", average_areal_density, ".1f", "mg/cm²"),
 	]
 	for weighting in reactions + ["ko-d"] + xray_energy_bands + ["stopping"]:
 		if weighting not in total_yield or total_yield[weighting] > 0:
