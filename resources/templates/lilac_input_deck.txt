@@ -4,7 +4,7 @@
 
 ! BASIC RUN CONTROLS, LASER PARAMETERS, AND PHYSICS OPTIONS
 &rhydro
-    job_name = '<<sanitized name>>',
+    job_name = '<<sanitized name:s>>',
     shot_number = '0',
     ipfreq = 999999,
     itmax = 299999,  ! maximum number of timesteps
@@ -18,7 +18,7 @@
     ntemp = 2,  ! two-temperature fluid
     irpost = 0,  ! no post-processing of radiation transport
     ipostf = 0,
-    fabs = <<absorption fraction>>,  ! absorption fraction
+    fabs = <<absorption fraction:.4f>>,  ! absorption fraction
     frayd = 1e-15,  ! start ray-tracing and absorption model immediately
     ilang = 1,  ! Langdon effect on
     isupt = 0,  ! no suprathermal transport
@@ -29,8 +29,8 @@
     ps_file = 'pulse_shape.txt',  ! pulse shape file
     abs_model = 'sbs',  ! original cross-beam coupling model
     sbs_factor = 1.0,
-    deloc_model(1) = '<<nonthermal model>>',
-    fflux = -<<flux limiter>>,  ! sharp-cutoff flux limiter
+    deloc_model(1) = '<<nonthermal model:s>>',
+    fflux = -<<flux limiter:.3f>>,  ! sharp-cutoff flux limiter
     field_swelling = .true.,
     fswell = 0.2,  ! field swelling limited to 20% Kruer intensity
     zoning = 'user',  ! specify ncell in every layer
@@ -42,22 +42,22 @@
     icut = 100000,  ! terminate this many time-steps after min-volume
     tcut = 0.3,  ! terminate at 300 ps
     tpostf = 5.0, 2.0,
-    tpostsw = <<laser off time>>,  ! ns
+    tpostsw = <<laser off time:.3f>>,  ! ns
     idiagn = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  ! no diagnostics
     ippost(13) = 2,  ! output as HDF5
 /
 
 ! PARAMETERS FOR LAYER 0: FILL
 &prof
-    matcod = <<fill material code>>,
-    phydr = <<fill protium percentage>>,
-    ptrit = <<fill tritium percentage>>,
+    matcod = <<fill material code:d>>,
+    phydr = <<fill protium percentage:.2f>>,
+    ptrit = <<fill tritium percentage:.2f>>,
     ncell = 150,
-    thick = <<fill radius>>,  ! um
-    gas_press = <<fill pressure>>,  ! atm
-    ieos = <<fill EOS option>>,
-    izion = <<fill ionization option>>,
-    iopac = <<fill opacity option>>,
+    thick = <<fill radius:.2f>>,  ! um
+    gas_press = <<fill pressure:.3f>>,  ! atm
+    ieos = <<fill EOS option:d>>,
+    izion = <<fill ionization option:d>>,
+    iopac = <<fill opacity option:d>>,
     itnuc = 4,  ! DD, DT, and D3He reactions
     eqrad = .false.,  ! equal-mass zoning
     feather = .false.,  ! no feathering outer zones
@@ -66,18 +66,18 @@
 
 ! PARAMETERS FOR LAYER 1: SHELL
 &prof
-    matcod = <<shell material code>>,
-    phydr = <<shell protium percentage>>,
-    ptrit = <<shell tritium percentage>>,
-    ncell = <<shell num cells>>,
-    thick = <<shell thickness>>,  ! um
+    matcod = <<shell material code:d>>,
+    phydr = <<shell protium percentage:.2f>>,
+    ptrit = <<shell tritium percentage:.2f>>,
+    ncell = <<shell num cells:d>>,
+    thick = <<shell thickness:.2f>>,  ! um
 <<if density specified>>
-    dens_mat = <<shell density>>,  ! g/cm3
+    dens_mat = <<shell density:.3f>>,  ! g/cm3
 <<endif density specified>>
-    densf = <<shell density multiplier>>,
-    ieos = <<shell EOS option>>,
-    izion = <<shell ionization option>>,
-    iopac = <<shell opacity option>>,
+    densf = <<shell density multiplier:.4f>>,
+    ieos = <<shell EOS option:d>>,
+    izion = <<shell ionization option:d>>,
+    iopac = <<shell opacity option:d>>,
     eqrad = .false.,
     feather = .true.,
     opgrp = '48_50x50Dt',
@@ -88,7 +88,7 @@
 &prof
     matcod = 13,  ! aluminum
     ncell = 20,
-    thick = <<aluminum thickness>>,  ! um
+    thick = <<aluminum thickness:.2f>>,  ! um
     dens_mat = 2.6989,  ! g/cm3
     ieos = 6,  ! analytic Thomas-Fermi EOS table
     izion = 2,  ! average-ion model

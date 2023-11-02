@@ -78,9 +78,9 @@ def log_message(message: str) -> None:
 	print(message)
 
 
-def fill_in_template(template_filename: str, parameters: dict[str, str],
+def fill_in_template(template_filename: str, parameters: dict[str, Any],
                      flags: Optional[dict[str, bool]] = None,
-                     loops: Optional[dict[str, Iterable[str]]] = None) -> str:
+                     loops: Optional[dict[str, Iterable[Any]]] = None) -> str:
 	""" load a template from resources/templates and replace all of the angle-bracket-marked
 	    parameter names with actual user-specified parameters
 	    :param template_filename: the filename of the template to load, excluding resources/templates/
@@ -94,20 +94,7 @@ def fill_in_template(template_filename: str, parameters: dict[str, str],
 	with open(f"resources/templates/{template_filename}") as template_file:
 		content = template_file.read()
 
-	# start with the parameter values
-	for key, value in parameters.items():
-		if value == "nan":
-			raise ValueError("you should never pass 'nan' into an input deck.  is this pandas's doing?  god, I "
-			                 "wish pandas wouldn't use nan as a missing placeholder; that's so incredibly not "
-			                 "what it's for.  onestly I just wish nan didn't exist.   it's like javascript null.  "
-			                 "anyway, check your inputs.  make sure none of them are empty or nan (except the "
-			                 "last three, which may be empty).")
-		if search(f"<<{key}>>", content):  # TODO: put the format string in the input deck and make the type of value Any
-			content = sub(f"<<{key}>>", value.replace("\\", "\\\\"), content)
-		else:
-			raise KeyError(f"the parameter <<{key}>> was not found in the template {template_filename}.")
-
-	# then do the flags
+	# do the flags
 	if flags is not None:
 		for key, active in flags.items():
 			# if it's active, remove the <<if>> and <<endif>> lines
@@ -117,6 +104,28 @@ def fill_in_template(template_filename: str, parameters: dict[str, str],
 			# if it's inactive, remove the <<if>> and <<endif>> lines and everything between them
 			else:
 				content = sub(f"<<if {key}>>.*<<endif {key}>>\n", "", content, flags=DOTALL)
+
+	# substitute the parameter values
+	for key, value in parameters.items():
+		if value == "nan":
+			raise ValueError("you should never pass 'nan' into an input deck.  is this pandas's doing?  god, I "
+			                 "wish pandas wouldn't use nan as a missing placeholder; that's so incredibly not "
+			                 "what it's for.  onestly I just wish nan didn't exist.   it's like javascript null.  "
+			                 "anyway, check your inputs.  make sure none of them are empty or nan (except the "
+			                 "last three, which may be empty).")
+		if value is None:
+			continue  # None values should only show up inside if blocks that don't evaluate
+		replaced_any = False
+		while search(f"<<{key}(:.+)?>>", content):
+			match = search(f"<<{key}(:(.+))?>>", content)
+			format_specifier = match.group(2)
+			if format_specifier is None:
+				format_specifier = "s"
+			formatted_value = format(value, format_specifier)
+			content = content[:match.start()] + formatted_value + content[match.end():]
+			replaced_any = True
+		if not replaced_any:
+			raise KeyError(f"the parameter <<{key}>> was not found in the template {template_filename}.")
 
 	# finally do the loops
 	if loops is not None:
@@ -130,10 +139,10 @@ def fill_in_template(template_filename: str, parameters: dict[str, str],
 			              result.replace("\\", "\\\\"), content, flags=DOTALL)
 
 	# check to make sure we got it all
-	remaining_blank = search("<<.*>>", content)
+	remaining_blank = search("<<(.*)>>", content)
 	if remaining_blank:
 		raise KeyError(f"you tried to fill out the template {template_filename} without specifying "
-		               f"the value of <<{remaining_blank.group()}>>")
+		               f"the value of <<{remaining_blank.group(1)}>>")
 
 	return content
 
