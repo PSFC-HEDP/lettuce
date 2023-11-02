@@ -123,6 +123,15 @@ def build_lilac_input_deck(
 		name: str, inputs: Series, laser_off_time: float,
 		fill_material: Material, shell_material: Material) -> str:
 	""" construct the input deck corresponding to the given inputs and return it as a str """
+	# the one thing we need to calculate ourselves is the number of cells in the shell
+	if shell_material.density is not None:
+		areal_density = shell_material.density*inputs["shell thickness"]
+		if notnull(inputs["density multiplier"]):
+			areal_density *= inputs["density multiplier"]
+		n_cells_shell = round(max(10, min(500, areal_density*10)))
+	else:
+		n_cells_shell = 150
+
 	return fill_in_template(
 		"lilac_input_deck.txt",
 		parameters={
@@ -130,7 +139,7 @@ def build_lilac_input_deck(
 			"submitted": datetime.today().isoformat(" "),
 			# rhydro namelist
 			"sanitized name": sub(r"[/\\{}<> ~#%&*?]", "-", name),
-			"absorption fraction": f"{inputs['absorption fraction']:.4f}",
+			"absorption fraction": f"{inputs['absorption fraction']:.4f}",  # TODO: the format string should be in the template
 			"nonthermal model": "none" if inputs["flux limiter"] > 0 else "vgon",
 			"flux limiter": f"{inputs['flux limiter']:.3f}" if inputs["flux limiter"] > 0 else "0",
 			"laser off time": f"{laser_off_time:.3f}",
@@ -153,6 +162,7 @@ def build_lilac_input_deck(
 			"shell density": f"{shell_material.density:.3f}" if shell_material.density is not None else "None",
 			"shell density multiplier": f"{inputs['density multiplier']:.4f}" if notnull(inputs["density multiplier"]) else "1",
 			"shell thickness": f"{inputs['shell thickness']:.2f}",
+			"shell num cells": f"{n_cells_shell:d}",
 			# third prof namelist (aluminum)
 			"aluminum thickness": f"{inputs['aluminum thickness']:.2f}",
 		},
