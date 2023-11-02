@@ -69,7 +69,7 @@
     matcod = <<shell material code>>,
     phydr = <<shell protium percentage>>,
     ptrit = <<shell tritium percentage>>,
-    ncell = 250,
+    ncell = <<shell num cells>>,
     thick = <<shell thickness>>,  ! um
 <<if density specified>>
     dens_mat = <<shell density>>,  ! g/cm3
