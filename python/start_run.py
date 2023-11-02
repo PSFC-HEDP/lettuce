@@ -126,8 +126,8 @@ def build_lilac_input_deck(
 	# the one thing we need to calculate ourselves is the number of cells in the shell
 	if shell_material.density is not None:
 		areal_density = shell_material.density*inputs["shell thickness"]
-		if notnull(inputs["density multiplier"]):
-			areal_density *= inputs["density multiplier"]
+		if notnull(inputs["shell density multiplier"]):
+			areal_density *= inputs["shell density multiplier"]
 		n_cells_shell = round(max(10, min(500, areal_density*10)))
 	else:
 		n_cells_shell = 150
@@ -160,7 +160,7 @@ def build_lilac_input_deck(
 			"shell opacity option": f"{shell_material.opacity:d}",
 			"shell ionization option": f"{shell_material.ionization:d}",
 			"shell density": f"{shell_material.density:.3f}" if shell_material.density is not None else "None",
-			"shell density multiplier": f"{inputs['density multiplier']:.4f}" if notnull(inputs["density multiplier"]) else "1",
+			"shell density multiplier": f"{inputs['shell density multiplier']:.4f}" if notnull(inputs["shell density multiplier"]) else "1",
 			"shell thickness": f"{inputs['shell thickness']:.2f}",
 			"shell num cells": f"{n_cells_shell:d}",
 			# third prof namelist (aluminum)
@@ -342,6 +342,6 @@ if __name__ == "__main__":
 	parser.add_argument(
 		"--force", action="store_true",
 		help="whether to overwrite any previous iterations of this run")
-	args = parser.parse_args(sys.argv[2:])
+	args = parser.parse_args(sys.argv[2:])  # TODO: add arguments to override flux limiter, density, and laser degradation
 
 	start_run(code, args.name, args.stopping_mode, args.force)
