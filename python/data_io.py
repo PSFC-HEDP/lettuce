@@ -14,7 +14,7 @@ INPUT_DTYPES = {
 	"outer diameter": float, "fill": str,
 	"shell material": str, "shell thickness": float, "aluminum thickness": float,
 	"absorption fraction": float, "flux limiter": float,
-	"laser degradation": float, "density multiplier": float,
+	"laser degradation": float, "shell density multiplier": float,
 }
 OUTPUT_DTYPES = {
 	"name": str, "slurm ID": str, "status": str, "status changed": str,
