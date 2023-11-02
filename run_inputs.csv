@@ -1,2 +1,2 @@
-name,laser energy,pulse shape,beam profile,outer diameter,shell material,shell thickness,aluminum thickness,fill,absorption fraction,flux limiter,laser degradation,density multiplier
+name,laser energy,pulse shape,beam profile,outer diameter,shell material,shell thickness,aluminum thickness,fill,absorption fraction,flux limiter,laser degradation,shell density multiplier
 example,27,SG10v001,SG5 SSD,860,glass,20,0.1,3atm D + 3atm T,.50,,,
