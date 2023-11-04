@@ -3,7 +3,7 @@ import shutil
 import sys
 from argparse import ArgumentParser
 from datetime import datetime
-from re import search, sub
+from re import search, sub, split
 from subprocess import run
 
 import h5py
@@ -101,13 +101,15 @@ def prepare_lilac_inputs(name: str) -> str:
 	           delimiter=" ", fmt="%.6f")  # type: ignore
 
 	# parse the materials
-	shell_material = get_solid_material_from_name(inputs["shell material"])
 	fill_material = get_gas_material_from_components(parse_gas_components(inputs["fill"]))
+	shell_layer_materials = [get_solid_material_from_name(name) for name in split(r"\s*\+\s*", inputs["shell material"])]
+	shell_layer_thicknesses = [float(x) for x in split(r"\s*\+\s*", inputs["shell thickness"])]
 
 	pulse_end_time = pulse_time[pulse_power >= 1/2*np.max(pulse_power)][-1]
 
 	# compose the input deck
-	input_deck = build_lilac_input_deck(name, inputs, pulse_end_time, fill_material, shell_material)
+	input_deck = build_lilac_input_deck(name, inputs, pulse_end_time, fill_material,
+	                                    shell_layer_materials, shell_layer_thicknesses)
 	with open(f"{directory}/lilac_data_input.txt", "w") as file:
 		file.write(input_deck)
 
@@ -121,16 +123,19 @@ def prepare_lilac_inputs(name: str) -> str:
 
 def build_lilac_input_deck(
 		name: str, inputs: Series, laser_off_time: float,
-		fill_material: Material, shell_material: Material) -> str:
+		fill_material: Material, shell_layer_materials: list[Material],
+		shell_layer_thicknesses: list[float]) -> str:
 	""" construct the input deck corresponding to the given inputs and return it as a str """
 	# the one thing we need to calculate ourselves is the number of cells in the shell
-	if shell_material.density is not None:
-		areal_density = shell_material.density*inputs["shell thickness"]
+	cell_counts = []
+	for i in range(len(shell_layer_materials)):
+		if shell_layer_materials[i].density is not None:
+			areal_density = shell_layer_materials[i].density*shell_layer_thicknesses[i]
+		else:
+			areal_density = 1.0*shell_layer_thicknesses[i]
 		if notnull(inputs["shell density multiplier"]):
 			areal_density *= inputs["shell density multiplier"]
-		n_cells_shell = round(max(10, min(500, areal_density*10)))
-	else:
-		n_cells_shell = 150
+		cell_counts.append(max(10, min(500, round(areal_density*10))))
 
 	return fill_in_template(
 		"lilac_input_deck.txt",
@@ -151,25 +156,28 @@ def build_lilac_input_deck(
 			"fill opacity option": fill_material.opacity,
 			"fill ionization option": fill_material.ionization,
 			"fill pressure": fill_material.pressure,
-			"fill radius": inputs['outer diameter']/2 - inputs['shell thickness'],
+			"fill radius": inputs['outer diameter']/2 - sum(shell_layer_thicknesses),
 			# second prof namelist (shell)
-			"shell material code": shell_material.material_code,
-			"shell protium percentage": shell_material.protium_fraction*100,
-			"shell tritium percentage": shell_material.tritium_fraction*100,
-			"shell EOS option": shell_material.eos,
-			"shell opacity option": shell_material.opacity,
-			"shell ionization option": shell_material.ionization,
-			"shell density": shell_material.density,
+			"shell thickness": shell_layer_thicknesses,
+			"shell num cells": cell_counts,
+			"shell material code": [material.material_code for material in shell_layer_materials],
+			"shell protium percentage": [material.protium_fraction*100 for material in shell_layer_materials],
+			"shell tritium percentage": [material.tritium_fraction*100 for material in shell_layer_materials],
+			"shell EOS option": [material.eos for material in shell_layer_materials],
+			"shell opacity option": [material.opacity for material in shell_layer_materials],
+			"shell ionization option": [material.ionization for material in shell_layer_materials],
+			"shell density": [material.density for material in shell_layer_materials],
 			"shell density multiplier": inputs['shell density multiplier'] if notnull(inputs["shell density multiplier"]) else 1.,
-			"shell thickness": inputs['shell thickness'],
-			"shell num cells": n_cells_shell,
 			# third prof namelist (aluminum)
 			"aluminum thickness": inputs['aluminum thickness'],
 		},
 		flags={
-			"density specified": shell_material.density is not None,
+			"density specified": [material.density is not None for material in shell_layer_materials],
 			"aluminum": inputs["aluminum thickness"] > 0,
-		}
+		},
+		loops={
+			"i": range(len(shell_layer_materials)),
+		},
 	)
 
 

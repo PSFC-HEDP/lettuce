@@ -4,3 +4,7 @@ krabs is a <<noun>>
 <<if false>>
 the earth is actually round
 <<endif false>>
+<<loop i>>
+<<i>>: <<pokemon[<<i>>]>>
+<<endloop i>>
+my favorite is <<pokemon[1]>>

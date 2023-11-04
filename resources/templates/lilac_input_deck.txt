@@ -65,23 +65,25 @@
 /
 
 ! PARAMETERS FOR LAYER 1: SHELL
+<<loop i>>
 &prof
-    matcod = <<shell material code:d>>,
-    phydr = <<shell protium percentage:.2f>>,
-    ptrit = <<shell tritium percentage:.2f>>,
-    ncell = <<shell num cells:d>>,
-    thick = <<shell thickness:.2f>>,  ! um
-<<if density specified>>
-    dens_mat = <<shell density:.3f>>,  ! g/cm3
-<<endif density specified>>
+    matcod = <<shell material code[<<i>>]:d>>,
+    phydr = <<shell protium percentage[<<i>>]:.2f>>,
+    ptrit = <<shell tritium percentage[<<i>>]:.2f>>,
+    ncell = <<shell num cells[<<i>>]:d>>,
+    thick = <<shell thickness[<<i>>]:.2f>>,  ! um
+<<if density specified[<<i>>]>>
+    dens_mat = <<shell density[<<i>>]:.3f>>,  ! g/cm3
+<<endif density specified[<<i>>]>>
     densf = <<shell density multiplier:.4f>>,
-    ieos = <<shell EOS option:d>>,
-    izion = <<shell ionization option:d>>,
-    iopac = <<shell opacity option:d>>,
+    ieos = <<shell EOS option[<<i>>]:d>>,
+    izion = <<shell ionization option[<<i>>]:d>>,
+    iopac = <<shell opacity option[<<i>>]:d>>,
     eqrad = .false.,
     feather = .true.,
     opgrp = '48_50x50Dt',
 /
+<<endloop i>>
 
 <<if aluminum>>
 ! PARAMETERS FOR LAYER 2: ALUMINIUM
