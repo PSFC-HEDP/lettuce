@@ -36,11 +36,17 @@ def test_log_message():
 
 
 def test_fill_in_template():
-	expected_output = "krabs is a nice person\n"
+	expected_output = "krabs is a nice person\n" \
+	                  "0: electrode\n" \
+	                  "1: diglett\n" \
+	                  "2: nidoran\n" \
+	                  "3: mankey\n" \
+	                  "my favorite is diglett\n"
 	actual_output = fill_in_template(
 		"../../tests/template.txt",
-		parameters={"noun": "nice person"},
-		flags={"true": True, "false": False})
+		parameters={"noun": "nice person", "pokemon": ["electrode", "diglett", "nidoran", "mankey"]},
+		flags={"true": True, "false": False},
+		loops={"i": range(4)})
 	assert actual_output == expected_output
 
 

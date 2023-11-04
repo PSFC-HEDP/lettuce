@@ -357,7 +357,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 	for weighting in reactions + ["ko-d"] + xray_energy_bands + ["stopping"]:
 		if weighting not in total_yield or total_yield[weighting] > 0:
 			pdf.set_font("Noto", "B", 16)
-			pdf.write(10, f"{weighting} quantities")
+			pdf.write(10, f"{weighting} averaged quantities")
 			pdf.ln()
 			pdf.set_font("Noto", "", 16)
 			for label, values, foremat, units in averaged_quantities:

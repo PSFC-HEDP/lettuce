@@ -1,10 +1,10 @@
 import json
 from datetime import datetime
-from re import fullmatch, sub, DOTALL, search
-from typing import Optional, Any, Iterable
+from re import fullmatch, sub, DOTALL, search, IGNORECASE
+from typing import Optional, Any, Iterable, Union
 
 import numpy as np
-from numpy import isfinite
+from numpy import isfinite, isnan
 from numpy.typing import NDArray
 from pandas import read_csv, DataFrame, Series, concat
 
@@ -12,7 +12,7 @@ INPUT_DTYPES = {
 	"name": str,
 	"laser energy": float, "pulse shape": str, "beam profile": str,
 	"outer diameter": float, "fill": str,
-	"shell material": str, "shell thickness": float, "aluminum thickness": float,
+	"shell material": str, "shell thickness": str, "aluminum thickness": float,
 	"absorption fraction": float, "flux limiter": float,
 	"laser degradation": float, "shell density multiplier": float,
 }
@@ -79,7 +79,7 @@ def log_message(message: str) -> None:
 
 
 def fill_in_template(template_filename: str, parameters: dict[str, Any],
-                     flags: Optional[dict[str, bool]] = None,
+                     flags: Optional[dict[str, Union[bool, list[bool]]]] = None,
                      loops: Optional[dict[str, Iterable[Any]]] = None) -> str:
 	""" load a template from resources/templates and replace all of the angle-bracket-marked
 	    parameter names with actual user-specified parameters
@@ -94,49 +94,85 @@ def fill_in_template(template_filename: str, parameters: dict[str, Any],
 	with open(f"resources/templates/{template_filename}") as template_file:
 		content = template_file.read()
 
-	# do the flags
+	# first make sure every passed key is well-formed and present in the raw template
+	for key in parameters.keys():
+		if key.startswith("if "):
+			raise ValueError("parameter names may not begin with 'if ' because it makes it look like a flag")
+		elif key.startswith("loop "):
+			raise ValueError("parameter names may not begin with 'loop ' because it makes it look like a loop variable")
+		if not search(fr"<<{key}(\[.+])?(:.+)?>>", content):
+			raise KeyError(f"the parameter <<{key}>> was not present in the template")
 	if flags is not None:
-		for key, active in flags.items():
-			# if it's active, remove the <<if>> and <<endif>> lines
-			if active:
-				content = sub(f"<<if {key}>>\n", "", content)
-				content = sub(f"<<endif {key}>>\n", "", content)
-			# if it's inactive, remove the <<if>> and <<endif>> lines and everything between them
-			else:
-				content = sub(f"<<if {key}>>.*<<endif {key}>>\n", "", content, flags=DOTALL)
+		for key in flags.keys():
+			if not search(fr"<<if {key}(\[.+])?>>", content):
+				raise KeyError(f"the flag <<if {key}>> was not present in the template")
+	if loops is not None:
+		for key in loops.keys():
+			if not search(fr"<<loop {key}>>", content):
+				raise KeyError(f"the loop <<loop {key}>> was not present in the template")
+
+	# expand the loops
+	if loops is None:
+		loops = {}
+	# for each <<loop>> statement you find
+	while search(r"<<loop [a-z0-9 ]+>>\n", content, flags=IGNORECASE):
+		header_match = search(r"<<loop ([a-z0-9 ]+)>>\n", content, flags=IGNORECASE)
+		key = header_match.group(1)
+		values = loops[key]
+		# repeat the block for each item in the loop
+		block_match = search(f"<<loop {key}>>\n(.*)<<endloop {key}>>\n", content, flags=DOTALL)
+		if block_match is None:
+			raise ValueError(f"I couldn't find the <<endloop {key}>> tag to go with <<loop {key}>>.")
+		result = ""
+		for value in values:
+			result += sub(f"<<{key}>>", str(value), block_match.group(1))
+		content = content[:block_match.start()] + result + content[block_match.end():]
+
+	# do the flags
+	# for each <<if>> statement you find
+	while search(r"<<if [a-z0-9 ]+(\[[0-9]+])?>>\n", content, flags=IGNORECASE):
+		header_match = search(r"<<if ([a-z0-9 ]+)(\[([0-9]+)])?>>\n", content, flags=IGNORECASE)
+		key = header_match.group(1)
+		index = header_match.group(3)
+		if index is None:
+			indexed_key = key
+			active = flags[key]
+		else:
+			indexed_key = fr"{key}\[{index}\]"
+			active = flags[key][int(index)]
+		block_match = search(f"<<if {indexed_key}>>\n(.*)<<endif {indexed_key}>>\n", content, flags=DOTALL)
+		if block_match is None:
+			raise ValueError(f"I couldn't find the <<endif {indexed_key}>> tag to go with <<if {indexed_key}>>.")
+		# if it's active, remove the <<if>> and <<endif>> lines but leave the content
+		if active:
+			content = content[:block_match.start()] + block_match.group(1) + content[block_match.end():]
+		# if it's inactive, remove the <<if>> and <<endif>> lines and everything between them
+		else:
+			content = content[:block_match.start()] + content[block_match.end():]
 
 	# substitute the parameter values
-	for key, value in parameters.items():
-		if value == "nan":
+	used_parameter_keys = set()
+	# for each remaining <<.*>> you find
+	while search(r"<<[a-z0-9 ]+(\[[0-9]+])?(:[a-z0-9.]+)?>>", content, flags=IGNORECASE):
+		match = search(r"<<([a-z0-9 ]+)(\[([0-9]+)])?(:([a-z0-9.]+))?>>", content, flags=IGNORECASE)
+		key = match.group(1)
+		index = match.group(3)
+		format_specifier = match.group(5)
+		used_parameter_keys.add(key)
+		value = parameters[key]
+		if index is not None:
+			value = value[int(index)]
+		if type(value) is float and isnan(value):
 			raise ValueError("you should never pass 'nan' into an input deck.  is this pandas's doing?  god, I "
 			                 "wish pandas wouldn't use nan as a missing placeholder; that's so incredibly not "
 			                 "what it's for.  onestly I just wish nan didn't exist.   it's like javascript null.  "
 			                 "anyway, check your inputs.  make sure none of them are empty or nan (except the "
 			                 "last three, which may be empty).")
-		if value is None:
-			continue  # None values should only show up inside if blocks that don't evaluate
-		replaced_any = False
-		while search(f"<<{key}(:.+)?>>", content):
-			match = search(f"<<{key}(:(.+))?>>", content)
-			format_specifier = match.group(2)
-			if format_specifier is None:
-				format_specifier = "s"
-			formatted_value = format(value, format_specifier)
-			content = content[:match.start()] + formatted_value + content[match.end():]
-			replaced_any = True
-		if not replaced_any:
-			raise KeyError(f"the parameter <<{key}>> was not found in the template {template_filename}.")
-
-	# finally do the loops
-	if loops is not None:
-		for key, values in loops.items():
-			# repeat the block for each item in the loop
-			block = search(f"<<loop {key}>>(.*)<<endloop {key}>>\n", content, flags=DOTALL).group(1)
-			result = ""
-			for value in values:
-				result += sub(f"<<{key}>>", value, block)
-			content = sub(f"<<loop {key}>>.*<<endloop {key}>>\n",
-			              result.replace("\\", "\\\\"), content, flags=DOTALL)
+		# format the value appropriately
+		if format_specifier is not None:
+			value = format(value, format_specifier)
+		# and insert the value
+		content = content[:match.start()] + value + content[match.end():]
 
 	# check to make sure we got it all
 	remaining_blank = search("<<(.*)>>", content)
