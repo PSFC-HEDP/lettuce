@@ -14,7 +14,7 @@ from pandas import Series, Timestamp, notnull
 
 from data_io import load_pulse_shape, parse_gas_components, load_beam_profile, load_inputs_table, \
 	load_outputs_table, log_message, fill_in_template, write_row_to_outputs_table
-from material import Material, get_solid_material_from_name, get_gas_material_from_components, nuclide_symbol
+from material import Material, get_solid_material_from_name, get_gas_material_from_components, isotope_symbol
 from utilities import degrade_laser_pulse, gradient, select_key_indices, rebin
 
 
@@ -206,7 +206,7 @@ def prepare_iris_inputs(name: str, stopping_power_mode: int) -> str:
 		nuclide_fractions = {nuclide: zeros(num_layers) for nuclide in ["H", "D", "T", "³He", "¹²C"]}
 		for i in range(num_layers):
 			for j in range(file["target/component_abundance"].shape[1]):
-				nuclide = nuclide_symbol(round(file["target/component_nuclear_charge"][i, j]),
+				nuclide = isotope_symbol(round(file["target/component_nuclear_charge"][i, j]),
 				                         round(file["target/component_atomic_weight"][i, j]))
 				if nuclide in nuclide_fractions:
 					nuclide_fractions[nuclide][i] += file["target/component_abundance"][i, j]
