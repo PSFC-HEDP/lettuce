@@ -1,5 +1,6 @@
 import os.path
 from argparse import ArgumentParser
+from collections import defaultdict
 from datetime import datetime
 
 import h5py
@@ -7,12 +8,12 @@ import numpy as np
 from astropy.units import meter, centimeter, second, kilogram, joule, coulomb, farad, kiloelectronvolt
 from fpdf import FPDF
 from matplotlib import pyplot as plt, colors
-from numpy import stack, tile, cumsum, float64, nonzero, pi, average, exp, log, argmin, argmax
+from numpy import stack, tile, cumsum, float64, nonzero, pi, average, exp, log, argmin, argmax, zeros
 from numpy.typing import NDArray
 from pandas import Timestamp
 from scipy import integrate
 
-from material import nuclide_symbol
+from material import isotope_symbol, nuclide_symbol
 from data_io import write_row_to_outputs_table
 from utilities import apparent_brightness, width, gradient
 
@@ -44,39 +45,49 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 		num_zones = solution["target/zone/atomic_mass"].size
 		thermal_transport_model = solution["target/tt_model"][()].decode()
 
-		# find the node and interface positions
+		# find the node positions
 		node_position = solution["node/boundary_position"][:, :]  # (μm)
 		zone_position = (node_position[0:-1, :] + node_position[1:, :])/2
 		zone_height = node_position[1:, :] - node_position[0:-1, :]
-		interface_indices = solution["target/last_zone"][:] - 1  # subtract 1 because LILAC indexes from 2
-		interface_position = node_position[interface_indices, :]
 
 		# get the compositions of the different layers
 		mass_density = solution["zone/mass_density"][:, :]  # (g/cm^3)
+		species_density = defaultdict(lambda: zeros(zone_position.shape))
 		layers = []
 		for i in range(num_layers):
-			if i == 0:
-				thickness = interface_position[i, 0]
-			else:
-				thickness = interface_position[i, 0] - interface_position[i - 1, 0]
+			inner_index = solution["target/first_zone"][i] - 2  # subtract 2 because LILAC indexes from 2
+			outer_index = solution["target/last_zone"][i] - 1
+			thickness = node_position[outer_index, 0] - node_position[inner_index, 0]
 			if solution["target/material_id"][i] == 13:
 				layer_name = "Coating"
 			elif solution["target/material_id"][i] == 102:
 				layer_name = "Ice"
-			elif mass_density[interface_indices[i] - 1, 0] < .1:
+			elif mass_density[inner_index, 0] < .1:
 				layer_name = "Fill"
 			else:
 				layer_name = "Shell"
 			layers.append(Layer(
 				layer_name,
 				thickness,
+				inner_index,
+				outer_index,
 				solution["target/material_name"][i].decode(),
-				mass_density[interface_indices[i] - 1, 0],
+				mass_density[inner_index, 0],
 				solution["target/component_symbol"][i, :],
 				solution["target/component_abundance"][i, :],
 				np.round(solution["target/component_atomic_weight"][i, :]).astype(int),
 				np.round(solution["target/component_nuclear_charge"][i, :]).astype(int),
 			))
+
+			# calculate the specific ion densities
+			for j in range(len(layers[i].component_abundances)):
+				species = nuclide_symbol(layers[i].atomic_numbers[j], layers[i].mass_numbers[j])
+				specific_density = layers[i].component_abundances[j]/(
+						solution["target/atomic_weight"][i]*1.66054e-24)  # (g^-1)
+				species_density[species][inner_index:outer_index, :] += \
+					mass_density[inner_index:outer_index, :]*specific_density  # (cm^-3)
+
+		interface_position = node_position[[layer.outer_index for layer in layers], :]
 
 		time = solution["time/absolute_time"][:].astype(float64)  # (ns)
 		laser_power = solution["time/laser_power"][:]/1e12  # (TW)
@@ -85,7 +96,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 		time = time - time[start_index]
 
 		# pull out the different cumulative yield arrays
-		reactions = ["DT-n", "D3He-p", "DD-n"]
+		fusion_reactions = ["DT-n", "D3He-p", "DD-n"]
 		# note that LILAC calls these arrays "cumulative" but they're literally just not cumulative.
 		# I convert them to cumulative because I think that's the most numericly precise way to do it.
 		zone_cumulative_yield = {
@@ -107,16 +118,24 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 			total_yield_rate[reaction] = gradient(total_cumulative_yield[reaction], time, axis=0)  # neutrons/ns
 			# and extract the final time-integrated value
 			total_yield[reaction] = total_cumulative_yield[reaction][-1]
-		main_reaction = max(reactions, key=lambda reaction: total_yield[reaction])
+		main_fusion_reaction = max(fusion_reactions, key=lambda reaction: total_yield[reaction])
 
-		# also calculate knock-on deuteron yield
-		deuterium_areal_density = np.sum(
-			solution["zone/deuteron_density"]*zone_height, axis=0)*1e-4  # deuteron/cm^2
-		knockon_cross_section = .100e-24  # cm^2 (see C. K. Li and al., Phys. Plasmas 8 (2001) 4902)
-		total_yield_rate["ko-d"] = total_yield_rate["DT-n"]*knockon_cross_section*deuterium_areal_density*1.1  # deuteron/ns
-		total_yield["ko-d"] = integrate.trapezoid(x=time, y=total_yield_rate["ko-d"])
+		# also calculate knock-on yields
+		knockon_reactions = ["ko-d (peak)", "ko-t (peak)", "ko-p"]
+		for reaction in knockon_reactions:
+			particle = reaction[3]
+			species_areal_density = np.sum(
+				species_density[particle]*zone_height, axis=0)*1e-4  # particle/cm^2
+			if particle == "p":
+				knockon_cross_section = .6876e-24  # cm^2
+			elif particle == "d":
+				knockon_cross_section = .6440e-24*.157  # cm^2 (see C. K. Li and al., Phys. Plasmas 8 (2001) 4902)
+			elif particle == "t":
+				knockon_cross_section = .9403e-24*.135  # cm^2 (see C. K. Li and al., Phys. Plasmas 8 (2001) 4902)
+			total_yield_rate[reaction] = total_yield_rate["DT-n"]*knockon_cross_section*species_areal_density*1.1  # particle/ns
+			total_yield[reaction] = integrate.trapezoid(x=time, y=total_yield_rate[reaction])
 
-		main_charged_particle = max(["D3He-p", "DD-n", "ko-d"], key=lambda particle: total_yield[particle])
+		main_charged_particle = max(["D3He-p", "DD-n", "ko-d (peak)", "ko-p"], key=lambda particle: total_yield[particle])
 
 		# calculate bang-time
 		bang_index, bang_time, burn_width = {}, {}, {}
@@ -187,7 +206,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 
 	average_ion_temperature = {}
 	average_areal_density = {}
-	for reaction in reactions:
+	for reaction in fusion_reactions:
 		if np.any(zone_yield_rate[reaction] > 0):
 			average_ion_temperature[reaction] = average(
 				ion_temperature, weights=zone_yield_rate[reaction])
@@ -195,13 +214,13 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 				areal_density["total"], weights=total_yield_rate[reaction])
 
 	# in the event there is no fusion at all, make sure we have some values to report
-	if main_reaction not in bang_time:
+	if main_fusion_reaction not in bang_time:
 		# use time of minimum volume as a backup to bang-time
-		bang_index[main_reaction] = argmin(interface_position[0, :])
-		bang_time[main_reaction] = time[bang_index[main_reaction]]
+		bang_index[main_fusion_reaction] = argmin(interface_position[0, :])
+		bang_time[main_fusion_reaction] = time[bang_index[main_fusion_reaction]]
 		# and snapshot values at that time as a backup to averages
-		average_ion_temperature[main_reaction] = ion_temperature[0, bang_index[main_reaction]]
-		average_areal_density[main_reaction] = areal_density["total"][bang_index[main_reaction]]
+		average_ion_temperature[main_fusion_reaction] = ion_temperature[0, bang_index[main_fusion_reaction]]
+		average_areal_density[main_fusion_reaction] = areal_density["total"][bang_index[main_fusion_reaction]]
 
 	# calculate convergence ratio (defining radius with the gas-shell interface)
 	radius = interface_position[0, :]
@@ -209,7 +228,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 
 	# save the pulse shape and burn history as a CSV
 	table = stack(
-		[time] + [total_yield_rate[reaction] for reaction in reactions],
+		[time] + [total_yield_rate[reaction] for reaction in fusion_reactions],
 		axis=1)
 	np.savetxt(
 		f"{directory}/time_history.csv", table, delimiter=",",  # type: ignore
@@ -226,7 +245,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 	                            cmap="inferno", norm=colors.LogNorm(vmin=.02, vmax=20))
 	for i in range(num_layers):
 		ax_bottom.plot(time, interface_position[i, :], 'w-', linewidth=1)
-	ax_bottom.set_xlim(0, min(np.max(time), bang_time[main_reaction] + 1))
+	ax_bottom.set_xlim(0, min(np.max(time), bang_time[main_fusion_reaction] + 1))
 	ax_bottom.set_ylim(0, 1.2*interface_position[-1, 0])
 	ax_bottom.set_xlabel(f"Time (ns)")
 	ax_bottom.set_ylabel(f"Radius (μm)")
@@ -244,7 +263,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 			curves.append(
 				ax_top_rite.plot(time, total_yield_rate[reaction], zorder=3)[0])
 			labels.append(reaction)
-	ax_top_left.set_xlim(0, min(np.max(time), bang_time[main_reaction] + 1))
+	ax_top_left.set_xlim(0, min(np.max(time), bang_time[main_fusion_reaction] + 1))
 	ax_top_left.set_ylim(0, None)
 	ax_top_left.set_ylabel("Power (TW)")
 	ax_top_left.locator_params(steps=[1, 2, 5, 10])
@@ -261,7 +280,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 	# plot the density and temperature profiles
 	fig, (ax_top, ax_T) = plt.subplots(
 		2, 1, sharex="all", gridspec_kw=dict(hspace=0), figsize=(140*mm, 100*mm), facecolor="none")
-	i = bang_index[main_reaction]
+	i = bang_index[main_fusion_reaction]
 	ax_T.plot(zone_position[:, i], ion_temperature[:, i], "C1--")
 	ax_T.set_ylabel("$T_\\mathrm{i}$ (keV)")
 	ax_T.set_ylim(0, None)
@@ -317,7 +336,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 			if len(layer.component_names[i]) == 0:
 				break
 			component_descriptions.append(
-				f"{layer.component_abundances[i]:.0%} {nuclide_symbol(layer.atomic_numbers[i], layer.mass_numbers[i])}")
+				f"{layer.component_abundances[i]:.0%} {isotope_symbol(layer.atomic_numbers[i], layer.mass_numbers[i])}")
 		layer_description = f"{layer.name}: {layer.thickness:.1f} μm {layer.material_name} ({' + '.join(component_descriptions)}) at {layer.density:.2g} g/cm³"
 		pdf.set_x(15)
 		pdf.write(10, layer_description)
@@ -354,7 +373,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 		("Degeneracy", average_degeneracy, ".3g", ""),
 		("ρR", average_areal_density, ".1f", "mg/cm²"),
 	]
-	for weighting in reactions + ["ko-d"] + xray_energy_bands + ["stopping"]:
+	for weighting in fusion_reactions + knockon_reactions + xray_energy_bands + ["stopping"]:
 		if weighting not in total_yield or total_yield[weighting] > 0:
 			pdf.set_font("Noto", "B", 16)
 			pdf.write(10, f"{weighting} averaged quantities")
@@ -374,24 +393,27 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 	print("updating run_outputs.csv...")
 	write_row_to_outputs_table({
 		"name": name,
-		"yield": total_yield[main_reaction],
-		"bang-time": bang_time[main_reaction],
+		"yield": total_yield[main_fusion_reaction],
+		"bang-time": bang_time[main_fusion_reaction],
 		"convergence ratio": convergence_ratio,
-		"areal density": average_areal_density[main_reaction],
-		"ion temperature": average_ion_temperature[main_reaction],
+		"areal density": average_areal_density[main_fusion_reaction],
+		"ion temperature": average_ion_temperature[main_fusion_reaction],
 	})
 	print("done!")
 
 
 class Layer:
-	def __init__(self, name: str, thickness: float, material_name: str, density: float,
+	def __init__(self, name: str, thickness: float, inner_index: NDArray[float], outer_index: NDArray[float],
+	             material_name: str, density: float,
 	             component_names: NDArray[str], component_abundances: NDArray[float],
 	             mass_numbers: NDArray[float], atomic_numbers: NDArray[float]):
 		""" a layer of an unimploded capsule
 			:param name: a human-readable identifier
 		    :param thickness: the thickness (or radius in the gas fill's case) in μm
+		    :param inner_index: the index of the node that marks its inner interface
+		    :param outer_index: the index of the node that marks its outer interface
 		    :param material_name: the name of the material
-		    :param density: the density of the material in kg/L
+		    :param density: the initial density of the material in kg/L
 		    :param component_names: the symbol of each nuclide in this material
 		    :param component_abundances: the atomic fraction of each nuclide in this material
 		    :param mass_numbers: the atomic weight of each nuclide in this material in Da
@@ -399,6 +421,8 @@ class Layer:
 		"""
 		self.name = name
 		self.thickness = thickness
+		self.inner_index = inner_index
+		self.outer_index = outer_index
 		self.material_name = material_name
 		self.density = density
 		self.component_names = component_names

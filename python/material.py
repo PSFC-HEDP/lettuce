@@ -142,7 +142,21 @@ LILAC_D3He_MIXTURES = {
 
 
 def nuclide_symbol(atomic_number: int, mass_number: int) -> str:
-	""" succinctly describe this particular nuclide """
+	""" succinctly describe this particular nuclide (p, d, ³He, and so on) """
+	if atomic_number == -1:
+		return "e"
+	elif atomic_number == 1 and mass_number == 1:
+		return "p"
+	elif atomic_number == 1 and mass_number == 2:
+		return "d"
+	elif atomic_number == 1 and mass_number == 3:
+		return "t"
+	else:
+		return to_superscript(str(mass_number)) + ATOMIC_SYMBOLS[atomic_number]
+
+
+def isotope_symbol(atomic_number: int, mass_number: int) -> str:
+	""" succinctly describe this particular isotope (¹H, D, ³He, and so on) """
 	if atomic_number == 1 and mass_number == 2:
 		return "D"
 	elif atomic_number == 1 and mass_number == 3:

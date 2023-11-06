@@ -2,12 +2,19 @@ import pytest
 from numpy import nan
 
 from material import find_best_D3He_material_code, get_solid_material_from_name, Material, \
-	get_gas_material_from_components, nuclide_symbol
+	get_gas_material_from_components, isotope_symbol, nuclide_symbol
 
 
 def test_nuclide_symbol():
-	assert nuclide_symbol(1, 3) == "T"
+	assert nuclide_symbol(1, 1) == "p"
+	assert nuclide_symbol(1, 3) == "t"
 	assert nuclide_symbol(6, 12) == "¹²C"
+
+
+def test_isotope_symbol():
+	assert isotope_symbol(1, 1) == "¹H"
+	assert isotope_symbol(1, 3) == "T"
+	assert isotope_symbol(6, 12) == "¹²C"
 
 
 def test_find_best_D3He_code():
