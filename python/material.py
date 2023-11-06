@@ -113,6 +113,7 @@ LILAC_SOLID_MATERIALS = {
 	"CH":          Material(110, eos=8, ionization=1, opacity=8, density=1.03),
 	"strong CD":   Material(113, eos=8, ionization=1, opacity=8, density=1.09),
 	"CD":          Material(115, eos=8, ionization=1, opacity=1, density=1.10),
+	"CHGe":        Material(148, eos=8, ionization=2, opacity=21, density=1.11),
 	"SiO2":        Material(150, eos=6, ionization=1, opacity=1, density=2.20),
 	"glass":       Material(150, eos=6, ionization=1, opacity=1, density=2.20),
 	"polystyrene": Material(510, eos=8, ionization=1, opacity=8, density=1.05),
