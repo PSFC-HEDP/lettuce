@@ -258,7 +258,10 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 	curves.append(
 		ax_top_left.plot(time, laser_power, "k--", zorder=2)[0])
 	labels.append("Laser")
-	for reaction in total_yield_rate.keys():
+	burn_histories_to_plot = total_yield_rate.keys()
+	burn_histories_to_plot = filter(lambda key: total_yield[key] > 0, burn_histories_to_plot)
+	burn_histories_to_plot = sorted(burn_histories_to_plot, key=lambda key: total_yield[key], reverse=True)
+	for reaction in burn_histories_to_plot[:3]:
 		if np.any(total_yield_rate[reaction] > 0):
 			curves.append(
 				ax_top_rite.plot(time, total_yield_rate[reaction], zorder=3)[0])
