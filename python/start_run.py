@@ -135,7 +135,7 @@ def build_lilac_input_deck(
 			areal_density = 1.0*shell_layer_thicknesses[i]
 		if notnull(inputs["shell density multiplier"]):
 			areal_density *= inputs["shell density multiplier"]
-		cell_counts.append(max(10, min(500, round(areal_density*10))))
+		cell_counts.append(max(10, min(500, round(areal_density*15))))
 
 	return fill_in_template(
 		"lilac_input_deck.txt",
