@@ -68,6 +68,9 @@ To start the run, call
 ~~~bash
 ./start_lilac_run.sh [NAME]
 ~~~
+The `[NAME]` should be the same as what's in the "name" column of `run_inputs.csv`.
+It can also end in an asterisk to run all pattern-matched names in the table.
+This currently only works for a single asterisk at the end of the name.
 It will warn you if the simulation appears to be exactly the same as one that has already been run.
 If you have multiple runs you want to do, call this once for each one and they will be queued in parallel.
 

@@ -25,6 +25,16 @@ def start_run(code: str, name: str, stopping_power_mode: int, force: bool) -> No
 	    :param stopping_power_mode: one of 0 for no stopping, 1 for Li-Petrasso-Zylstra, or 2 for Maynard-Deutsch
 	    :param force: whether to run this even if another version of this run already exists TODO: let the user hit "y" so they don't have to redo the command
 	"""
+	if name.endswith("*"):
+		found_any_matches = False
+		for full_name in load_inputs_table().index:
+			if full_name[:len(name) - 1] == name[:-1]:
+				print(f"starting {code} run for {full_name}...")
+				start_run(code, full_name, stopping_power_mode, force)
+				found_any_matches = True
+		if not found_any_matches:
+			raise ValueError(f"no rows in the run_inputs.csv table match '{name}'")
+
 	if code == "LILAC":
 		# assess the current state of this run TODO: the outputs table needs to distinguish the LILAC state from the IRIS state, and warn you if you try to do IRIS without LILAC first
 		outputs_table = load_outputs_table()
