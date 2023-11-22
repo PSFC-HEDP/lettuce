@@ -52,7 +52,10 @@ def start_run(code: str, name: str, stopping_power_mode: int, force: bool) -> No
 		# if it's already running and the user did force it, cancel the run
 		elif current_status == "pending" or current_status == "running":
 			print(f"cancelling the current run...")
-			run(["scancel", outputs_table.loc[name, "slurm ID"]])
+			try:
+				run(["scancel", outputs_table.loc[name, "slurm ID"]])
+			except FileNotFoundError:
+				raise FileNotFoundError("I can't call scancel. are you sure slurm is installed and loaded?")
 		# if it's already run and the user did force it, clear the previous output
 		elif current_status == "completed":
 			print(f"overwriting the previous run...")
@@ -67,8 +70,11 @@ def start_run(code: str, name: str, stopping_power_mode: int, force: bool) -> No
 		return
 
 	# finally, submit the slurm job
-	submission = run(["sbatch", script_path],
-	                 check=True, capture_output=True, text=True)
+	try:
+		submission = run(["sbatch", script_path],
+		                 check=True, capture_output=True, text=True)
+	except FileNotFoundError:
+		raise FileNotFoundError("I can't call sbatch. are you sure slurm is installed and loaded?")
 	slurm_ID = search(r"batch job ([0-9]+)", submission.stdout).group(1)
 
 	# update our records
@@ -84,6 +90,7 @@ def start_run(code: str, name: str, stopping_power_mode: int, force: bool) -> No
 def prepare_lilac_inputs(name: str) -> str:
 	""" load the LILAC input parameters from run_inputs.csv and save the pulse shape, beam profile,
 	    and input deck to the relevant directory.
+	    :raises KeyError: if it can't find the relevant information in the input table
 	"""
 	directory = f"runs/{name}/{code.lower()}"
 	# get the run inputs from the run input table
@@ -362,4 +369,9 @@ if __name__ == "__main__":
 		help="whether to overwrite any previous iterations of this run")
 	args = parser.parse_args(sys.argv[2:])  # TODO: add arguments to override flux limiter, density, and laser degradation
 
-	start_run(code, args.name, args.stopping_mode, args.force)
+	try:
+		start_run(code, args.name, args.stopping_mode, args.force)
+		sys.exit(0)
+	except Exception as e:
+		print(f"Error!", *e.args)
+		sys.exit(1)

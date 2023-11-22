@@ -1,4 +1,5 @@
 import os.path
+import sys
 from argparse import ArgumentParser
 from collections import defaultdict
 from datetime import datetime
@@ -446,4 +447,9 @@ if __name__ == "__main__":
 		help="the end state of the run; one of 'completed', 'failed', or 'timeout'")
 	args = parser.parse_args()
 
-	postprocess_lilac_run(args.name, args.status)
+	try:
+		postprocess_lilac_run(args.name, args.status)
+		sys.exit(0)
+	except Exception as e:
+		print("Error!", *e.args)
+		sys.exit(1)
