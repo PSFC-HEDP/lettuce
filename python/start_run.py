@@ -34,6 +34,8 @@ def start_run(code: str, name: str, stopping_power_mode: int, force: bool) -> No
 				found_any_matches = True
 		if not found_any_matches:
 			raise ValueError(f"no rows in the run_inputs.csv table match '{name}'")
+		else:
+			return
 
 	if code == "LILAC":
 		# assess the current state of this run TODO: the outputs table needs to distinguish the LILAC state from the IRIS state, and warn you if you try to do IRIS without LILAC first
