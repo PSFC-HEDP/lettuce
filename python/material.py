@@ -116,6 +116,8 @@ LILAC_SOLID_MATERIALS = {
 	"CHGe":        Material(148, eos=8, ionization=2, opacity=21, density=1.11),
 	"SiO2":        Material(150, eos=6, ionization=1, opacity=1, density=2.20),
 	"glass":       Material(150, eos=6, ionization=1, opacity=1, density=2.20),
+	"CHCu":        Material(232, eos=8, ionization=1, opacity=1, density=1.23),
+	"CHSi":        Material(356, eos=4, ionization=4, opacity=21, density=1.24),
 	"polystyrene": Material(510, eos=8, ionization=1, opacity=8, density=1.05),
 }
 
@@ -184,10 +186,25 @@ def get_solid_material_from_name(name: str) -> Material:
 	    table](https://lle-prod-gitlab.lle.rochester.edu/lilac/lilac/-/wikis/material-table) for
 	    more information.
 	"""
+	# start by simply looking the name up in the dict of preset materials
 	if name in LILAC_SOLID_MATERIALS:
 		return LILAC_SOLID_MATERIALS[name]
 	else:
-		raise IndexError(f"I don't recognize the material '{name}'")
+		# otherwise try interpreting it as a material code
+		try:
+			material_code = int(name)
+		except ValueError:
+			raise IndexError(f"I don't recognize the material '{name}'")
+		else:
+			# search the preset materials for a matching one
+			for material in LILAC_SOLID_MATERIALS.values():
+				if material.material_code == material_code:
+					return material
+			# if there is no preset material, initialize one with the default options
+			if material_code <= 92:
+				return Material(material_code, eos=6, ionization=2, opacity=1)
+			else:
+				return Material(material_code, eos=8, ionization=1, opacity=1)
 
 
 def get_gas_material_from_components(partial_pressures: dict[str, float]) -> Material:
