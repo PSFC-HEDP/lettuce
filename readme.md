@@ -129,9 +129,10 @@ The columns are as follows:
 - **outer diameter**  
   The size of the capsule, in micrometers.
 - **shell material**  
-  The name of the shell material.  Many materials have multiple acceptable names (for example, "SiO2" and "glass" both do the same thing).
+  The name or code of the shell material.  Some materials have multiple acceptable names (for example, "SiO2" and "glass" both do the same thing).
+  For layered shells, you can put multiple materials separated by slashes (for example, "CH/148/CH").
 - **shell thickness**  
-  The thickness of the shell, in micrometers.
+  The thickness of the shell, in micrometers.  If multiple materials were given, the same number of thicknesses must be given, separated by slashes.
 - **aluminum thickness**  
   The thickness of the aluminum coating on the outside of the shell, in micrometers (usually 0.1).
 - **fill**  
