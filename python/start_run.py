@@ -121,8 +121,8 @@ def prepare_lilac_inputs(name: str) -> str:
 
 	# parse the materials
 	fill_material = get_gas_material_from_components(parse_gas_components(inputs["fill"]))
-	shell_layer_materials = [get_solid_material_from_name(name) for name in split(r"\s*\+\s*", inputs["shell material"])]
-	shell_layer_thicknesses = [float(x) for x in split(r"\s*\+\s*", inputs["shell thickness"])]
+	shell_layer_materials = [get_solid_material_from_name(name) for name in split(r"\s*/\s*", inputs["shell material"])]
+	shell_layer_thicknesses = [float(x) for x in split(r"\s*/\s*", inputs["shell thickness"])]
 
 	pulse_end_time = pulse_time[pulse_power >= 1/2*np.max(pulse_power)][-1]
 
