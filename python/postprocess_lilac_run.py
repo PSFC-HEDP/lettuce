@@ -3,6 +3,7 @@ import sys
 from argparse import ArgumentParser
 from collections import defaultdict
 from datetime import datetime
+from os import path
 
 import h5py
 import numpy as np
@@ -158,7 +159,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 		# calculate the x-ray emission averaged temperature
 		xray_energy_bands = []
 		average_mass_density, average_electron_temperature, average_ionization = {}, {}, {}
-		for cutoff in [2., 10., 50.]:  # (keV)
+		for cutoff in [1., 5., 20.]:  # (keV)
 			key = f"{cutoff:.0f}+ keV x-ray"
 			weights = solution["zone/zone_volume"][:, :]*apparent_brightness(
 				electron_density, electron_temperature, cutoff)
@@ -339,8 +340,9 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 		for i in range(layer.component_abundances.size):
 			if len(layer.component_names[i]) == 0:
 				break
-			component_descriptions.append(
-				f"{layer.component_abundances[i]:.0%} {isotope_symbol(layer.atomic_numbers[i], layer.mass_numbers[i])}")
+			if layer.component_abundances[i] > 0:
+				component_descriptions.append(
+					f"{layer.component_abundances[i]:.0%} {isotope_symbol(layer.atomic_numbers[i], layer.mass_numbers[i])}")
 		layer_description = f"{layer.name}: {layer.thickness:.1f} μm {layer.material_name} ({' + '.join(component_descriptions)}) at {layer.density:.2g} g/cm³"
 		pdf.set_x(15)
 		pdf.write(10, layer_description)
@@ -391,7 +393,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 					pdf.ln()
 			pdf.ln()
 	# save it!
-	pdf.output(f"{directory}/summary.pdf")
+	pdf.output(f"{directory}/summary {path.split(name)[-1]}.pdf")
 
 	# update our records
 	print("updating run_outputs.csv...")
