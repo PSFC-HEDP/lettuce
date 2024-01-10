@@ -8,6 +8,9 @@ from numpy import isfinite, isnan
 from numpy.typing import NDArray
 from pandas import read_csv, DataFrame, Series, concat
 
+from material import parse_isotope_symbol, isotope_symbol
+from utilities import from_superscript
+
 INPUT_DTYPES = {
 	"name": str,
 	"laser energy": float, "pulse shape": str, "beam profile": str,
@@ -89,7 +92,8 @@ def fill_in_template(template_filename: str, parameters: dict[str, Any],
 	    :param loops: a set of iterables to be used to evaluate <<loop>> blocks
 	    :return: a string containing the contents of the template with all the <<>>s evaluated
 	    :raise KeyError: if there is a <<>> expression in the template and the corresponding value is not
-	                     given in parameters or flags
+	                     given in parameters or flags, or if a non-None value is given in parameters or
+	                     flags or loop but there is no corresponding <<>> expression in the template.
 	"""
 	with open(f"resources/templates/{template_filename}") as template_file:
 		content = template_file.read()
@@ -170,9 +174,12 @@ def fill_in_template(template_filename: str, parameters: dict[str, Any],
 			                 "last three, which may be empty).")
 		# format the value appropriately
 		if format_specifier is not None:
-			value = format(value, format_specifier)
+			if format_specifier == "l":  # I have one homebrewed format specifier, "l"
+				value = ", ".join(repr(item) for item in value)  # it's for lists and relies on repr
+			else:
+				value = format(value, format_specifier)
 		# and insert the value
-		content = content[:match.start()] + value + content[match.end():]
+		content = content[:match.start()] + str(value) + content[match.end():]
 
 	# check to make sure we got it all
 	remaining_blank = search("<<(.*)>>", content)
@@ -242,12 +249,17 @@ def parse_gas_components(descriptor: str) -> dict[str, float]:
 	parts = descriptor.split("+")
 	components = {}
 	for part in parts:
-		reading = fullmatch(r"\s*([0-9.]+)(\s?atm)?\s*([0-9]*[A-Za-z]+)2?\s*", part)
+		part = from_superscript(part)  # turn any ³s into 3s (I don't expect that to come up, but just in case.)
+		reading = fullmatch(r"\s*([0-9.]+)(\s?atm)?\s+([0-9.]*[A-Za-z]+)2?\s*", part)
 		if reading is None:
 			raise ValueError(f"cannot parse '{part}'")
 		pressure = float(reading.group(1))
-		nuclide = reading.group(3)
-		if nuclide in components:
-			raise ValueError(f"the nuclide '{nuclide}' seems to appear twice in '{descriptor}'.")
-		components[nuclide] = pressure
+		symbol = reading.group(3)
+		try:
+			symbol = isotope_symbol(*parse_isotope_symbol(symbol))  # convert the symbol to numbers and back to normalize it
+		except ValueError:
+			pass
+		if symbol in components:
+			raise ValueError(f"the nuclide '{symbol}' seems to appear twice in '{descriptor}'.")
+		components[symbol] = pressure
 	return components

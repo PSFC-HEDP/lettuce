@@ -14,7 +14,8 @@ from pandas import Series, Timestamp, notnull
 
 from data_io import load_pulse_shape, parse_gas_components, load_beam_profile, load_inputs_table, \
 	load_outputs_table, log_message, fill_in_template, write_row_to_outputs_table
-from material import Material, get_solid_material_from_name, get_gas_material_from_components, isotope_symbol
+from material import Material, get_solid_material_from_name, get_gas_material_from_components, isotope_symbol, \
+	parse_isotope_symbol
 from utilities import degrade_laser_pulse, gradient, select_key_indices, rebin
 
 
@@ -156,6 +157,24 @@ def build_lilac_input_deck(
 			areal_density *= inputs["shell density multiplier"]
 		cell_counts.append(max(10, min(500, round(areal_density*15))))
 
+	# we also need to enumerate the component species of the fuel if it's a custom material
+	if fill_material.material_code < 0:
+		custom_fill = True
+		component_symbols = list(fill_material.components.keys())
+		component_weights, component_charges = [], []
+		component_codes, component_abundances = [], []
+		for symbol in component_symbols:
+			charge, weight = parse_isotope_symbol(symbol)
+			component_weights.append(weight)
+			component_charges.append(charge)
+			component_codes.append(charge if symbol not in "DT" else 21)
+			component_abundances.append(fill_material.components[symbol])
+	else:
+		custom_fill = False
+		component_symbols, component_abundances = None, None
+		component_weights, component_charges = None, None
+		component_codes = None
+
 	return fill_in_template(
 		"lilac_input_deck.txt",
 		parameters={
@@ -169,19 +188,27 @@ def build_lilac_input_deck(
 			"laser off time": laser_off_time,
 			# first prof namelist (fill)
 			"fill material code": fill_material.material_code,
-			"fill protium percentage": fill_material.protium_fraction*100,
-			"fill tritium percentage": fill_material.tritium_fraction*100,
+			"fill protium percentage": fill_material.components.get("H", 0)*100,
+			"fill tritium percentage": fill_material.components.get("T", 0)*100,
 			"fill EOS option": fill_material.eos,
 			"fill opacity option": fill_material.opacity,
 			"fill ionization option": fill_material.ionization,
 			"fill pressure": fill_material.pressure,
 			"fill radius": inputs['outer diameter']/2 - sum(shell_layer_thicknesses),
+			# mater namelist (fill mix)
+			"true fill material code": abs(fill_material.material_code) if custom_fill else None,
+			"fill opacity table": fill_material.opacity_table,
+			"fill component symbols": component_symbols,
+			"fill component abundances": component_abundances,
+			"fill component atomic weights": component_weights,
+			"fill component atomic numbers": component_charges,
+			"fill component material codes": component_codes,
 			# second prof namelist (shell)
 			"shell thickness": shell_layer_thicknesses,
 			"shell num cells": cell_counts,
 			"shell material code": [material.material_code for material in shell_layer_materials],
-			"shell protium percentage": [material.protium_fraction*100 for material in shell_layer_materials],
-			"shell tritium percentage": [material.tritium_fraction*100 for material in shell_layer_materials],
+			"shell protium percentage": [material.components.get("H", 0)*100 for material in shell_layer_materials],
+			"shell tritium percentage": [material.components.get("T", 0)*100 for material in shell_layer_materials],
 			"shell EOS option": [material.eos for material in shell_layer_materials],
 			"shell opacity option": [material.opacity for material in shell_layer_materials],
 			"shell ionization option": [material.ionization for material in shell_layer_materials],
@@ -191,6 +218,7 @@ def build_lilac_input_deck(
 			"aluminum thickness": inputs['aluminum thickness'],
 		},
 		flags={
+			"custom fill": custom_fill,
 			"density specified": [material.density is not None for material in shell_layer_materials],
 			"aluminum": inputs["aluminum thickness"] > 0,
 		},

@@ -182,13 +182,28 @@ Note that only the shell needs to have `feather=.true.`.  For some reason it's f
 No, I don't know what "feathering" is so please stop asking.
 
 Not all materials are listed in the user guide.
-You can get an idea for what materials exist by looking at the opacity tables in `/lle/data/opacity_tables`,
+You can get an idea for what materials exist by looking at the opacity tables in `/lle/data/opacity_tables`
+(*not* `/theory_codes/opacity_tables` as the user guide suggests),
 but note that those won't give you accurate mass numbers or default densities.
 The complete list of D³He materials is given, to the best of my ability, in [`material.py`](python/material.py).
 
-The user guide gives a few ways to make custom materials, none of which work.
-The real way to make a custom material is
+The user guide gives a few ways to make custom materials.
+The fancy way is to simply pass multiple material codes in a `&prof` namelist and specify their abundances with `mixfrac`.
+Unfortunately, this only works if both materials are compatible with `iopac=1` (i.e. have an astrophysical table)
+or both are compatible with `iopac=7` (i.e. are a valid input to aplmix).
+Also, this mixing routine requires aplmix regardless and I don't think I have access to aplmix.
+The more reliable way is to use a negative material code and the `&mater` namelist.
+If in a `&prof` namelist the material code is negative (`-1` conventionally) *or* if `opgrp=user`,
+then LILAC will expect to see a `&mater` namelist immediately after it.
+This namelist is used to provide additional material information,
+tho be careful as you need to provide *all* of that information.
+Specificly, you need to provide the material nuclide species and abundances,
+a positive material code (unclear how this is used),
+the full opacity table filename (even if this is inferrable from `iopac` and the material code),
+and the list of radiation energy bins for that opacity table
+(even tho the opacity table specifies the energy bins and it's the same 48 bins that all of the opacity tables use
+(the radiation energy bins in each layer must be the same or LILAC will throw a (surprisingly helpful) error message)).
 
 The IRIS documentation doesn't state what units the inputs must be in.
 In reality they're all SI (velocity in m/s, density in kg/m³, and cetera).
-Note that temperature is in J, not K.
+Note that temperature is in J, not K or keV.

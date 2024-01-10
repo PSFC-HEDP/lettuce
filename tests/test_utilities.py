@@ -4,7 +4,7 @@ import pytest
 from numpy import array, concatenate, inf, ones
 
 from utilities import gradient, width, apparent_brightness, degrade_laser_pulse, to_superscript, \
-	select_key_indices, rebin
+	select_key_indices, rebin, from_superscript, drop_zeros
 
 
 def test_degrade_laser_pulse():
@@ -17,9 +17,17 @@ def test_degrade_laser_pulse():
 
 
 def test_to_superscript():
-	assert to_superscript("321") == "³²¹"
-	with pytest.raises(KeyError):
-		to_superscript("a")
+	assert to_superscript("321X") == "³²¹X"
+
+
+def test_from_superscript():
+	assert from_superscript("³²¹X") == "321X"
+
+
+def test_drop_zeros():
+	assert drop_zeros({"electrode": 1, "diglett": 0}) == {"electrode": 1}
+	assert drop_zeros({"nidoran": 2}) == {"nidoran": 2}
+	assert drop_zeros({}) == {}
 
 
 def test_gradient():
