@@ -452,6 +452,9 @@ if __name__ == "__main__":
 	try:
 		postprocess_lilac_run(args.name, args.status)
 		sys.exit(0)
+	except (FileNotFoundError, KeyError) as e:
+		print("Error! There was no LILAC output.")
+		sys.exit(1)
 	except Exception as e:
 		print("Error!", *e.args)
 		sys.exit(1)
