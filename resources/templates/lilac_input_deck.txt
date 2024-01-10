@@ -63,6 +63,19 @@
     feather = .false.,  ! no feathering outer zones
     opgrp = '48_50x50Dt',
 /
+<<if custom fill>>
+&mater
+    matcod = <<true fill material code:d>>,
+    matf_user = '/lle/data/opacity_tables/<<fill opacity table>>',
+    compsym = <<fill component symbols:l>>,
+    compab = <<fill component abundances:l>>,
+    compaw = <<fill component atomic weights:l>>,
+    compz = <<fill component atomic numbers:l>>,
+    matcomp = <<fill component material codes:l>>,  ! 21 means D or T
+    nxgroup = 48,
+    hnuev = 0, 5.0E+01, 8.5E+01, 1.0E+02, 2.0E+02, 2.5E+02, 2.8E+02, 3.0E+02, 3.2E+02, 3.5E+02, 3.85E+02, 4.15E+02, 4.45E+02, 4.6E+02, 5.0E+02, 6.0E+02, 7.0E+02, 8.0E+02, 9.0E+02, 9.5E+02, 1.0E+03, 1.1E+03, 1.2E+03, 1.3E+03, 1.4E+03, 1.5E+03, 1.6E+03, 1.7E+03, 1.8E+03, 1.9E+03, 2.0E+03, 2.2E+03, 2.4E+03, 2.6E+03, 2.8E+03, 3.0E+03, 3.5E+03, 4.0E+03, 5.0E+03, 6.0E+03, 7.0E+03, 8.0E+03, 9.0E+03, 1.0E+04, 2.0E+04, 3.0E+04, 4.0E+04, 8.0E+04, 1.0E+05,
+/
+<<endif custom fill>>
 
 ! PARAMETERS FOR LAYER 1: SHELL
 <<loop i>>

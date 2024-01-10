@@ -1,3 +1,5 @@
+from typing import Union
+
 import numpy as np
 from numpy import arange, interp, exp, sqrt, isfinite, inf, cumsum, where, concatenate, \
 	linspace, unique, \
@@ -19,7 +21,25 @@ def to_superscript(string: str) -> str:
 		"0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴",
 		"5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹",
 	}
-	return "".join(superscript[character] for character in string)
+	return "".join(superscript.get(character, character) for character in string)
+
+
+def from_superscript(string: str) -> str:
+	""" convert a string to not use special unicode superscript letters """
+	normalscript = {
+		"⁰": "0", "¹": "1", "²": "2", "³": "3", "⁴": "4",
+		"⁵": "5", "⁶": "6", "⁷": "7", "⁸": "8", "⁹": "9",
+	}
+	return "".join(normalscript.get(character, character) for character in string)
+
+
+def drop_zeros(counts: dict[str, Union[int, float]]) -> dict[str, Union[int, float]]:
+	""" copy a dictionary with all zero elements removed """
+	output = {}
+	for key in counts.keys():
+		if counts[key] != 0:
+			output[key] = counts[key]
+	return output
 
 
 def gradient(y: NDArray[float], x: NDArray[float], **kwargs):
