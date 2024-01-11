@@ -15,8 +15,7 @@ class Material:
 			self, material_code: int, *,
 			eos: int, opacity: Union[int, str], ionization: int,
 			density: Optional[float] = None, pressure: Optional[float] = None,
-			components: Optional[dict[str, float]] = None,
-			opacity_table: Optional[str] = None):
+			components: Optional[dict[str, float]] = None):
 		""" define a material by its composition and density
 		    :param material_code: the LILAC material code (see LILAC user guide).  it may be negative instead of
 		                          positive to indicate that LILAC doesn't have an exact match, but the absolute value
@@ -73,9 +72,7 @@ class Material:
 		self.ionization = ionization
 		self.components = components if components is not None else {}
 		# determine the default opacity table if it's not given
-		if opacity_table is not None:
-			self.opacity_table = opacity_table
-		elif opacity == 1:
+		if opacity == 1:
 			self.opacity_table = f"aot_pl_48_50x50Dt_{abs(self.material_code)}.txt"
 		elif opacity == 8:
 			self.opacity_table = f"FPOT_pl_48_50x50Dt_{abs(self.material_code)}.txt"
@@ -131,38 +128,29 @@ ATOMIC_MASSES = [
 # how to specify various common solids in LILAC
 # see the [LILAC material table](https://lle-prod-gitlab.lle.rochester.edu/lilac/lilac/-/wikis/material-table) for more information.
 LILAC_SOLID_MATERIALS = {
-	"H":           Material(102, eos=8, ionization=1, opacity=8, components={"¹H": 1.00},
-	                        opacity_table="HDT_plt_50x50Dt_101.prp"),
-	"DT":          Material(102, eos=8, ionization=1, opacity=8, components={"T": 0.50},
-	                        opacity_table="HDT_plt_50x50Dt_101.prp"),
+	"H":           Material(102, eos=8, ionization=1, opacity=8, components={"¹H": 1.00}),
+	"DT":          Material(102, eos=8, ionization=1, opacity=8, components={"T": 0.50}),
 	"Li":          Material(3, eos=6, ionization=2, opacity=1),
 	"Be":          Material(4, eos=6, ionization=2, opacity=1),
 	"diamond":     Material(6, eos=6, ionization=2, opacity=1, density=3.50),
 	"HDC":         Material(6, eos=6, ionization=2, opacity=1, density=3.50),
-	"Al":          Material(13, eos=6, ionization=2, opacity=1,
-	                        opacity_table="Al_pcr_50x50Dt_013.prp"),
+	"Al":          Material(13, eos=6, ionization=2, opacity=1),
 	"Si":          Material(14, eos=6, ionization=2, opacity=1),
 	"Fe":          Material(26, eos=6, ionization=2, opacity=1),
 	"Ge":          Material(32, eos=6, ionization=2, opacity=1),
 	"Ta":          Material(73, eos=6, ionization=2, opacity=1),
 	"Au":          Material(79, eos=6, ionization=4, opacity=21),
 	"U":           Material(92, eos=6, ionization=2, opacity=1),
-	"CH":          Material(110, eos=8, ionization=1, opacity=8, density=1.03,
-	                        opacity_table="CH_pcr_50x50Dt_110.prp"),
-	"strong CD":   Material(113, eos=8, ionization=1, opacity=8, density=1.09,
-	                        opacity_table="CD_pcr_50x50Dt_113.prp"),
+	"CH":          Material(110, eos=8, ionization=1, opacity=8, density=1.03),
+	"strong CD":   Material(113, eos=8, ionization=1, opacity=8, density=1.09),
 	"CD":          Material(115, eos=8, ionization=1, opacity=1, density=1.10),
 	"CHTi":        Material(125, eos=6, ionization=1, opacity=1),
-	"CHGe":        Material(148, eos=8, ionization=2, opacity=21, density=1.11,
-	                        opacity_table="CHGe(0p94%)_pcr_50x50DT_a.prp"),
-	"SiO2":        Material(150, eos=6, ionization=1, opacity=1, density=2.20,
-	                        opacity_table="SiO2_pcr_50x50Dt_150.prp"),
-	"glass":       Material(150, eos=6, ionization=1, opacity=1, density=2.20),
+	"CHGe":        Material(148, eos=8, ionization=2, opacity=21, density=1.11),
+	"SiO2":        Material(150, eos=6, ionization=1, opacity=1, density=2.20),
+	"glass":       Material(150, eos=6, ionization=1, opacity=1, density=2.20),	                        #opacity_table="SiO2_pcr_50x50Dt_150.prp"),
 	"CHCu":        Material(232, eos=8, ionization=1, opacity=1, density=1.23),
-	"CHSi":        Material(356, eos=4, ionization=4, opacity=21, density=1.24,
-	                        opacity_table="CHSi(7p4%)_pcr_50x50Dt_354.prp"),
-	"polystyrene": Material(510, eos=8, ionization=1, opacity=8, density=1.05,
-	                        opacity_table="CH_pcr_50x50Dt_510.prp"),
+	"CHSi":        Material(356, eos=4, ionization=4, opacity=21, density=1.24),
+	"polystyrene": Material(510, eos=8, ionization=1, opacity=8, density=1.05),
 }
 
 # how to specify various common gases in LILAC
@@ -170,8 +158,7 @@ LILAC_GAS_MATERIALS = {
 	"D": Material(101, eos=8, ionization=1, opacity=8,
 	              components={"D": 1}),
 	"DT": Material(101, eos=8, ionization=1, opacity=8,
-	               components={"D": .50, "T": .50},
-	               opacity_table="HDT_plt_50x50Dt_101.prp"),
+	               components={"D": .50, "T": .50}),
 	"He": Material(2, eos=6, ionization=2, opacity=1),
 	"N": Material(7, eos=6, ionization=2, opacity=1),
 	"Ne": Material(10, eos=6, ionization=2, opacity=1),
@@ -181,8 +168,7 @@ LILAC_GAS_MATERIALS = {
 	"D3He": Material(295, eos=6, ionization=1, opacity=1,
 	                 components={"D": .50, "³He": .50}),
 	"air": Material(300, eos=4, ionization=1, opacity=1,
-	                components={"N": .78, "O": .21, "Ar": .01},
-	                opacity_table="Air_pcr_50x50Dt_300.prp"),
+	                components={"N": .78, "O": .21, "Ar": .01}),
 }
 
 # material codes that correspond to mixtures of D³He (values are atomic ³He fraction)
