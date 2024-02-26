@@ -1,3 +1,6 @@
+# LILAC input deck (not technicly export controlled, but almost)
+resources/templates/lilac_input_deck.txt
+
 # run inputs file
 /run_inputs.csv
 
