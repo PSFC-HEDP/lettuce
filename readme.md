@@ -51,11 +51,18 @@ module load anaconda3/2023.07-2
 python3 -m pip install -r requirements.txt
 ~~~~
 It will probably say something about user installation because normal site-packages is not writeable.
+That's fine.
 
 If you're running locally you only need to do the twoth line.
 ~~~bash
 pip install -r requirements.txt
 ~~~
+
+You'll need the LILAC input deck template.
+LILAC input decks aren't export controlled, but LLE still doesn't like me sharing them freely.
+If you're using this repository, I assume you have LILAC access;
+ask me for the template file and I'll send it to you.
+It goes in `lettuce/resources`.
 
 ## Recommended workflow
 
@@ -170,7 +177,7 @@ The columns are as follows:
 - **ion temperature**  
   The burn-averaged ion temperature, in kiloelectron-volts.
 
-## some notes on LILAC and IRIS
+## some notes on LILAC and IRIS (or: what the LILAC user guide doesn't want you to know)
 
 Do not call LILAC with a command-line argument!  It will break all of the filenames.
 
@@ -203,6 +210,12 @@ the full opacity table filename (even if this is inferrable from `iopac` and the
 and the list of radiation energy bins for that opacity table
 (even tho the opacity table specifies the energy bins and it's the same 48 bins that all of the opacity tables use
 (the radiation energy bins in each layer must be the same or LILAC will throw a (surprisingly helpful) error message)).
+
+It wasn't working.  it's doing the correct amount of T but it's filling the rest with D.  I switched the order to put Ti last but no dies.  I added a matname and removed matcod from mater.  maybe next I'll try removing ptrit.  or messing with the matcod in &prof.  ope, setting matcod to -1 made it pure D.  wait, am I not specifying a matcod in &mater?  I put back the matcod in &mater and set matcod in &prof to -1, but agen it's oops all D.  which is weird because I was getting T at least before.
+just to be sure, let me now remove matname.
+that should set me back to one iteration ago.
+tf why is it still hydrogen?  is it the matcod=-1?  is that what screws it up?
+maybe I need to stop using the FPOT table and use a different one instead?
 
 The IRIS documentation doesn't state what units the inputs must be in.
 In reality they're all SI (velocity in m/s, density in kg/m³, and cetera).
