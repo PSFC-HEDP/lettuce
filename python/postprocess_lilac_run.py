@@ -450,13 +450,5 @@ if __name__ == "__main__":
 		help="the end state of the run; one of 'completed', 'failed', or 'timeout'")
 	args = parser.parse_args()
 
-	try:
-		postprocess_lilac_run(args.name, args.status)
-		sys.exit(0)
-	except (FileNotFoundError, KeyError) as e:
-		print("Error! There was no LILAC output.")
-		sys.exit(1)
-	except Exception as e:
-		print("Error!", *e.args)
-		traceback.print_exc()
-		sys.exit(1)
+	postprocess_lilac_run(args.name, args.status)
+	sys.exit(0)
