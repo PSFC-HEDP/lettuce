@@ -399,9 +399,5 @@ if __name__ == "__main__":
 		help="whether to overwrite any previous iterations of this run")
 	args = parser.parse_args(sys.argv[2:])  # TODO: add arguments to override flux limiter, density, and laser degradation
 
-	try:
-		start_run(code, args.name, args.stopping_mode, args.force)
-		sys.exit(0)
-	except Exception as e:
-		print(f"Error!", *e.args)
-		sys.exit(1)
+	start_run(code, args.name, args.stopping_mode, args.force)
+	sys.exit(0)
