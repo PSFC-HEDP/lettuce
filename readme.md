@@ -177,6 +177,16 @@ The columns are as follows:
 - **ion temperature**  
   The burn-averaged ion temperature, in kiloelectron-volts.
 
+## To do
+
+I have zero time to work on this rite now, but there are a few minor changes I want to make that will greatly improve this library before I hand LILAC off.  and some major changes.
+- allow multiple runs be started simultaneusly by simply separating their names with commas.
+- instead of quitting when the user tries to overwrite a run without having set `--force`, ask them `[Y/n]`-style whether they want to overwrite it.
+- have options like `--flux_limiter=.07` to automaticly generate a new set of run_inputs based on an existing row in run_inputs.csv but with one parameter tweaked and an appropriate tag appended to the name with a slash.
+- make the output PDFs portait instead of landscape
+- use Lotus to set up IRIS runs instead of my current thing that doesn't actually work.
+- write an IRIS postprocessing script that makes a PDF with some spectra and images.
+
 ## some notes on LILAC and IRIS (or: what the LILAC user guide doesn't want you to know)
 
 Do not call LILAC with a command-line argument!  It will break all of the filenames.
@@ -187,6 +197,12 @@ Do not use `zoning='user'` with `feather=.false.`!  This will cause bizarre spli
 Setting `feather=.true.`, even if `xfactor=1`, results in correct equal-mass zoning (or equal-thickness zoning if `eqrad=.true.`).
 Note that only the shell needs to have `feather=.true.`.  For some reason it's fine if `feather=.false.` in the fill.
 No, I don't know what "feathering" is so please stop asking.
+
+Sometimes a run will terminate before shock breakout, so you'll see the outer layer ablating for 800 ps or so but noting else.
+This is especially common when the shell has multiple layers,
+and especially especially when at least one of the layers is strong CD.
+I know it has to do with the density and number of zones in each layer,
+but I haven't found a way to reliably predict or prevent it.
 
 Not all materials are listed in the user guide.
 You can get an idea for what materials exist by looking at the opacity tables in `/lle/data/opacity_tables`
