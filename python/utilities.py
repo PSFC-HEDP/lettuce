@@ -151,9 +151,9 @@ def apparent_brightness(electron_number_density: NDArray[float],
 	"""
 	# catch arithmetic errors before they happen
 	if not np.all(isfinite(electron_number_density) & (electron_number_density >= 0)):
-		raise ValueError(f"some inputs to apparent_brightness() were invalid: ne={electron_number_density:.5g}cm^-3")
+		raise ValueError(f"some inputs to apparent_brightness() were invalid: ne = {np.min(electron_number_density):.5g} cm^-3")
 	if not np.all(isfinite(electron_temperature) & (electron_temperature > 0)):
-		raise ValueError(f"some inputs to apparent_brightness() were invalid: Te={electron_temperature:.5g}keV")
+		raise ValueError(f"some inputs to apparent_brightness() were invalid: Te = {np.min(electron_temperature):.5g} keV")
 
 	# finally, account for the original spectrum (thus expanding the array to 3d)
 	return (electron_number_density**2 *

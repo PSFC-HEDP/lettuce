@@ -14,6 +14,7 @@ from numpy import stack, tile, cumsum, float64, nonzero, pi, average, exp, log, 
 from numpy.typing import NDArray
 from pandas import Timestamp
 from scipy import integrate
+import traceback
 
 from material import isotope_symbol, nuclide_symbol
 from data_io import write_row_to_outputs_table
@@ -457,4 +458,5 @@ if __name__ == "__main__":
 		sys.exit(1)
 	except Exception as e:
 		print("Error!", *e.args)
+		traceback.print_exc()
 		sys.exit(1)
