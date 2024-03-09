@@ -9,8 +9,7 @@ The name is a play on Varchas Gopalaswamy's Lotus
 which has some similar functionality.
 Unlike Lettuce, tho, Lotus is a Python *package*.
 So it helps you write your own Python scripts, but you still have to write the scripts yourself.
-Props to Varchas, because it's a nice and feature-rich package,
-but I'm just not about that life, you know?
+Not so with Lettuce!
 
 ## File structure
 
@@ -62,7 +61,7 @@ You'll need the LILAC input deck template.
 LILAC input decks aren't export controlled, but LLE still doesn't like me sharing them freely.
 If you're using this repository, I assume you have LILAC access;
 ask me for the template file and I'll send it to you.
-It goes in `lettuce/resources`.
+It goes in `lettuce/resources/templates/`.
 
 ## Recommended workflow
 
