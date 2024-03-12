@@ -163,7 +163,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 		for cutoff in [1., 5., 20.]:  # (keV)
 			key = f"{cutoff:.0f}+ keV x-ray"
 			weights = solution["zone/zone_volume"][:, :]*apparent_brightness(
-				electron_density, electron_temperature, cutoff)
+				np.maximum(0, electron_density), np.maximum(1e-3, electron_temperature), cutoff)
 			if np.any(weights > 0):
 				xray_energy_bands.append(key)
 				bang_index[key] = argmax(np.sum(weights, axis=0))
