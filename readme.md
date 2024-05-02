@@ -48,7 +48,7 @@ Right now I'm working on `anaconda3/2023.07-2`, so that would look like this:
 ~~~bash
 module load anaconda3/2023.07-2
 python3 -m pip install -r requirements.txt
-~~~~
+~~~
 It will probably say something about user installation because normal site-packages is not writeable.
 That's fine.
 
