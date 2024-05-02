@@ -85,7 +85,6 @@ class Material:
 		else:  # if it's for an opacity option I (Justin) don't understand
 			self.opacity_table = None  # just hope that it doesn't come up
 
-
 	def __eq__(self, other: Material) -> bool:
 		return self.material_code == other.material_code and \
 		       self.components == other.components and \
@@ -147,7 +146,7 @@ LILAC_SOLID_MATERIALS = {
 	"CHTi":        Material(125, eos=6, ionization=1, opacity=1),
 	"CHGe":        Material(148, eos=8, ionization=2, opacity=21, density=1.11),
 	"SiO2":        Material(150, eos=6, ionization=1, opacity=1, density=2.20),
-	"glass":       Material(150, eos=6, ionization=1, opacity=1, density=2.20),	                        #opacity_table="SiO2_pcr_50x50Dt_150.prp"),
+	"glass":       Material(150, eos=6, ionization=1, opacity=1, density=2.20),
 	"CHCu":        Material(232, eos=8, ionization=1, opacity=1, density=1.23),
 	"CHSi":        Material(356, eos=4, ionization=4, opacity=21, density=1.24),
 	"polystyrene": Material(510, eos=8, ionization=1, opacity=8, density=1.05),
