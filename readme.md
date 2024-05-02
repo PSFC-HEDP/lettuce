@@ -111,11 +111,11 @@ and generate a PDF containing spectra and images in its run directory.
 
 If you want to run unit tests, mind the PythonPath.  On Unix the command is
 ~~~bash
-PYTHONPATH=python python -m pytest
+PYTHONPATH=python/ python -m pytest
 ~~~
 On Windows PowerShell the command is
 ~~~powershell
-$env:pythonpath="python"; python -m pytest
+$env:pythonpath="python\"; python -m pytest
 ~~~
 
 ## Run inputs
