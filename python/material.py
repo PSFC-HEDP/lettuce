@@ -3,7 +3,7 @@ from __future__ import annotations
 from copy import copy
 from collections import defaultdict
 from re import fullmatch
-from typing import Optional, Union
+from typing import Optional, Union, Dict, Tuple
 
 from numpy import array, argmin
 
@@ -15,7 +15,7 @@ class Material:
 			self, material_code: int, *,
 			eos: int, opacity: Union[int, str], ionization: int,
 			density: Optional[float] = None, pressure: Optional[float] = None,
-			components: Optional[dict[str, float]] = None):
+			components: Optional[Dict[str, float]] = None):
 		""" define a material by its composition and density
 		    :param material_code: the LILAC material code (see LILAC user guide).  it may be negative instead of
 		                          positive to indicate that LILAC doesn't have an exact match, but the absolute value
@@ -85,7 +85,6 @@ class Material:
 		else:  # if it's for an opacity option I (Justin) don't understand
 			self.opacity_table = None  # just hope that it doesn't come up
 
-
 	def __eq__(self, other: Material) -> bool:
 		return self.material_code == other.material_code and \
 		       self.components == other.components and \
@@ -147,7 +146,7 @@ LILAC_SOLID_MATERIALS = {
 	"CHTi":        Material(125, eos=6, ionization=1, opacity=1),
 	"CHGe":        Material(148, eos=8, ionization=2, opacity=21, density=1.11),
 	"SiO2":        Material(150, eos=6, ionization=1, opacity=1, density=2.20),
-	"glass":       Material(150, eos=6, ionization=1, opacity=1, density=2.20),	                        #opacity_table="SiO2_pcr_50x50Dt_150.prp"),
+	"glass":       Material(150, eos=6, ionization=1, opacity=1, density=2.20),
 	"CHCu":        Material(232, eos=8, ionization=1, opacity=1, density=1.23),
 	"CHSi":        Material(356, eos=4, ionization=4, opacity=21, density=1.24),
 	"polystyrene": Material(510, eos=8, ionization=1, opacity=8, density=1.05),
@@ -182,39 +181,48 @@ LILAC_D3He_MIXTURES = {
 }
 
 
-def nuclide_symbol(atomic_number: int, mass_number: int) -> str:
-	""" succinctly describe this particular nuclide (p, d, ³He, and so on) """
+def nuclide_symbol(atomic_number: int, mass_number: float) -> str:
+	""" succinctly describe this particular nuclide (p, d, ³He, and so on).
+	    note that this function as written fails to make a distinction between protium and natural
+	    hydrogen. it's partially intentional; I hope to god I never need to think about that.
+	"""
 	if atomic_number == -1:
 		return "e"
-	elif atomic_number == 1 and mass_number == 1:
+	elif atomic_number == 1 and round(mass_number) == 1:
 		return "p"
-	elif atomic_number == 1 and mass_number == 2:
+	elif atomic_number == 1 and round(mass_number) == 2:
 		return "d"
-	elif atomic_number == 1 and mass_number == 3:
+	elif atomic_number == 1 and round(mass_number) == 3:
 		return "t"
 	else:
-		return to_superscript(str(mass_number)) + ATOMIC_SYMBOLS[atomic_number]
+		return to_superscript(str(round(mass_number))) + ATOMIC_SYMBOLS[atomic_number]
 
 
 def isotope_symbol(atomic_number: int, mass_number: float) -> str:
 	""" succinctly describe this particular isotope (¹H, D, ³He, and so on) """
-	if atomic_number == 1 and mass_number == 2:
+	if atomic_number == 1 and round(mass_number) == 2:
 		return "D"
-	elif atomic_number == 1 and mass_number == 3:
+	elif atomic_number == 1 and round(mass_number) == 3:
 		return "T"
 	elif mass_number == ATOMIC_MASSES[atomic_number]:
-		return ATOMIC_SYMBOLS[atomic_number]
+		return f"natural {ATOMIC_SYMBOLS[atomic_number]}"
 	elif mass_number == int(mass_number):
-		return to_superscript(str(int(mass_number))) + ATOMIC_SYMBOLS[atomic_number]
+		return to_superscript(str(round(mass_number))) + ATOMIC_SYMBOLS[atomic_number]
 	else:
 		return str(mass_number) + ATOMIC_SYMBOLS[atomic_number]
 
 
-def parse_isotope_symbol(symbol: str) -> tuple[int, float]:
+def parse_isotope_symbol(symbol: str) -> Tuple[int, float]:
 	""" take a succinct description of an isotope and deduce its atomic number and mass number
+	    :param symbol: the succinct descriptor.  typically this will be the mass number (expressed with normal numerals
+	                   or superscript numerals) followed by the elemental symbol, but it may also be "D" or "T" for
+	                   deuterium or tritium.  if the mass number is omitted or is simply the word "natural" (as in
+	                   "natural C"), it will be set to that element's natural average atomic mass.
 	    :return: the atomic number followed by the atomic weight in Da
 	"""
-	if symbol == "D":
+	if symbol.startswith("natural "):
+		return parse_isotope_symbol(symbol[8:])
+	elif symbol == "D":
 		return 1, 2.014
 	elif symbol == "T":
 		return 1, 3.016
@@ -231,7 +239,7 @@ def parse_isotope_symbol(symbol: str) -> tuple[int, float]:
 		return atomic_number, mass_number
 
 
-def expand_compound_materials(components: dict[str, float]) -> dict[str, float]:
+def expand_compound_materials(components: Dict[str, float]) -> Dict[str, float]:
 	""" take a dictionary denoting the molecular fractions of different materials in a mix, find any that are names of
 	    gasses rather than actual nuclides, and expand those so that you have just the nuclides instead.  modify it in
 	    place, but also return it
@@ -255,7 +263,7 @@ def expand_compound_materials(components: dict[str, float]) -> dict[str, float]:
 	return components
 
 
-def find_best_D3He_material_code(f3He: float) -> tuple[int, float]:
+def find_best_D3He_material_code(f3He: float) -> Tuple[int, float]:
 	""" find the LILAC material code that represents the mixture of D and ³He that most accurately
 	    represents the specified fill ratio.  specifically, find the LILAC material with the nearest
 	    atomic ³He fraction.

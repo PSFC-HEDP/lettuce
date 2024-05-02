@@ -68,7 +68,7 @@ It goes in `lettuce/resources/templates/`.
 ### LILAC
 
 The first step is to describe the run you want to do in `run_inputs.csv`.
-See [§ Run inputs](#Run inputs) for more information.
+See [§ Run inputs](#run-inputs) for more information.
 
 To start the run, call
 ~~~bash

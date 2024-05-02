@@ -7,18 +7,24 @@ from material import find_best_D3He_material_code, get_solid_material_from_name,
 
 def test_nuclide_symbol():
 	assert nuclide_symbol(1, 1) == "p"
+	assert nuclide_symbol(1, 2.014) == "d"
 	assert nuclide_symbol(1, 3) == "t"
 	assert nuclide_symbol(6, 12) == "¹²C"
+	assert nuclide_symbol(6, 12.011) == "¹²C"
 
 
 def test_isotope_symbol():
 	assert isotope_symbol(1, 1) == "¹H"
+	assert isotope_symbol(1, 2.014) == "D"
 	assert isotope_symbol(1, 3) == "T"
 	assert isotope_symbol(6, 12) == "¹²C"
+	assert isotope_symbol(6, 12.011) == "natural C"
 
 
 def test_parse_isotope_symbol():
+	assert parse_isotope_symbol("D") == (1, 2.014)
 	assert parse_isotope_symbol("¹²C") == (6, 12)
+	assert parse_isotope_symbol("natural C") == (6, 12.011)
 	assert parse_isotope_symbol("14.003C") == (6, 14.003)
 	assert parse_isotope_symbol("C") == (6, 12.011)
 	assert parse_isotope_symbol("232Th") == (90, 232)

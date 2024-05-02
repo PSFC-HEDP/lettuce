@@ -1,11 +1,10 @@
 import json
 from datetime import datetime
 from re import fullmatch, sub, DOTALL, search, IGNORECASE
-from typing import Optional, Any, Iterable, Union
+from typing import Optional, Any, Iterable, Union, Dict, List, Tuple
 
 import numpy as np
-from numpy import isfinite, isnan
-from numpy.typing import NDArray
+from numpy import isfinite, isnan, ndarray
 from pandas import read_csv, DataFrame, Series, concat
 
 from material import parse_isotope_symbol, isotope_symbol
@@ -43,7 +42,7 @@ def load_outputs_table() -> DataFrame:
 		return table
 
 
-def write_row_to_outputs_table(row: dict[str, Any], drop_previous_data=False) -> None:
+def write_row_to_outputs_table(row: Dict[str, Any], drop_previous_data=False) -> None:
 	""" load the input table, edit an existing row or add a new one, and save the updated version. """
 	if "name" not in row:
 		raise KeyError("the key 'name' must be present in any row you want to add to the outputs table.")
@@ -81,9 +80,9 @@ def log_message(message: str) -> None:
 	print(message)
 
 
-def fill_in_template(template_filename: str, parameters: dict[str, Any],
-                     flags: Optional[dict[str, Union[bool, list[bool]]]] = None,
-                     loops: Optional[dict[str, Iterable[Any]]] = None) -> str:
+def fill_in_template(template_filename: str, parameters: Dict[str, Any],
+                     flags: Optional[Dict[str, Union[bool, List[bool]]]] = None,
+                     loops: Optional[Dict[str, Iterable[Any]]] = None) -> str:
 	""" load a template from resources/templates and replace all of the angle-bracket-marked
 	    parameter names with actual user-specified parameters
 	    :param template_filename: the filename of the template to load, excluding resources/templates/
@@ -190,7 +189,7 @@ def fill_in_template(template_filename: str, parameters: dict[str, Any],
 	return content
 
 
-def load_pulse_shape(pulse_shape_name: str, total_energy: float) -> tuple[NDArray[float], NDArray[float]]:
+def load_pulse_shape(pulse_shape_name: str, total_energy: float) -> Tuple[ndarray, ndarray]:
 	""" load a pulse shape from disk
 	    :return: the time (ns) and total laser power (TW)
 	"""
@@ -223,7 +222,7 @@ def load_pulse_shape(pulse_shape_name: str, total_energy: float) -> tuple[NDArra
 	return time, power
 
 
-def load_beam_profile(beam_profile_name: str) -> tuple[NDArray[float], NDArray[float]]:
+def load_beam_profile(beam_profile_name: str) -> Tuple[Iterable[float], Iterable[float]]:
 	""" load a beam profile from disk
 	    :return: the radial coordinate (μm) and laser beam intensity (normalized)
 	"""
@@ -238,7 +237,7 @@ def load_beam_profile(beam_profile_name: str) -> tuple[NDArray[float], NDArray[f
 	return data[:, 0], data[:, 1]
 
 
-def parse_gas_components(descriptor: str) -> dict[str, float]:
+def parse_gas_components(descriptor: str) -> Dict[str, float]:
 	""" read a string that contains information about the components and pressure of a gas mixture
 	    :param descriptor: a string containing a list of nuclides and partial pressures.  it should look something
 	                       like this: "12atm 3He + 6atm D". Each component is given as a molecular pressure at 293K
