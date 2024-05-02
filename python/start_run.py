@@ -5,6 +5,7 @@ from argparse import ArgumentParser
 from datetime import datetime
 from re import search, sub, split
 from subprocess import run
+from typing import List
 
 import h5py
 import numpy as np
@@ -143,8 +144,8 @@ def prepare_lilac_inputs(name: str) -> str:
 
 def build_lilac_input_deck(
 		name: str, inputs: Series, laser_off_time: float,
-		fill_material: Material, shell_layer_materials: list[Material],
-		shell_layer_thicknesses: list[float]) -> str:
+		fill_material: Material, shell_layer_materials: List[Material],
+		shell_layer_thicknesses: List[float]) -> str:
 	""" construct the input deck corresponding to the given inputs and return it as a str """
 	# the one thing we need to calculate ourselves is the number of cells in the shell
 	cell_counts = []

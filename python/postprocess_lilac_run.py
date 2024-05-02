@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 from collections import defaultdict
 from datetime import datetime
 from os import path
+from typing import Sequence
 
 import h5py
 import numpy as np
@@ -11,7 +12,6 @@ from astropy.units import meter, centimeter, second, kilogram, joule, coulomb, f
 from fpdf import FPDF
 from matplotlib import pyplot as plt, colors
 from numpy import stack, tile, cumsum, float64, nonzero, pi, average, exp, log, argmin, argmax, zeros
-from numpy.typing import NDArray
 from pandas import Timestamp
 from scipy import integrate
 
@@ -77,13 +77,13 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 				mass_density[inner_index, 0],
 				solution["target/component_symbol"][i, :],
 				solution["target/component_abundance"][i, :],
-				np.round(solution["target/component_atomic_weight"][i, :]).astype(int),
+				solution["target/component_atomic_weight"][i, :],
 				np.round(solution["target/component_nuclear_charge"][i, :]).astype(int),
 			))
 
 			# calculate the specific ion densities
 			for j in range(len(layers[i].component_abundances)):
-				species = nuclide_symbol(layers[i].atomic_numbers[j], layers[i].mass_numbers[j])
+				species = nuclide_symbol(layers[i].atomic_numbers[j], round(layers[i].mass_numbers[j]))
 				specific_density = layers[i].component_abundances[j]/(
 						solution["target/atomic_weight"][i]*1.66054e-24)  # (g^-1)
 				species_density[species][inner_index:outer_index, :] += \
@@ -337,7 +337,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 	pdf.set_font("Noto", "", 16)
 	for layer in reversed(layers):
 		component_descriptions = []
-		for i in range(layer.component_abundances.size):
+		for i in range(len(layer.component_abundances)):
 			if len(layer.component_names[i]) == 0:
 				break
 			if layer.component_abundances[i] > 0:
@@ -409,10 +409,10 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 
 
 class Layer:
-	def __init__(self, name: str, thickness: float, inner_index: NDArray[float], outer_index: NDArray[float],
+	def __init__(self, name: str, thickness: float, inner_index: Sequence[float], outer_index: Sequence[float],
 	             material_name: str, density: float,
-	             component_names: NDArray[str], component_abundances: NDArray[float],
-	             mass_numbers: NDArray[float], atomic_numbers: NDArray[float]):
+	             component_names: Sequence[str], component_abundances: Sequence[float],
+	             mass_numbers: Sequence[float], atomic_numbers: Sequence[int]):
 		""" a layer of an unimploded capsule
 			:param name: a human-readable identifier
 		    :param thickness: the thickness (or radius in the gas fill's case) in μm

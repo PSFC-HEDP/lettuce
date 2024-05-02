@@ -3,7 +3,7 @@ from __future__ import annotations
 from copy import copy
 from collections import defaultdict
 from re import fullmatch
-from typing import Optional, Union
+from typing import Optional, Union, Dict, Tuple
 
 from numpy import array, argmin
 
@@ -15,7 +15,7 @@ class Material:
 			self, material_code: int, *,
 			eos: int, opacity: Union[int, str], ionization: int,
 			density: Optional[float] = None, pressure: Optional[float] = None,
-			components: Optional[dict[str, float]] = None):
+			components: Optional[Dict[str, float]] = None):
 		""" define a material by its composition and density
 		    :param material_code: the LILAC material code (see LILAC user guide).  it may be negative instead of
 		                          positive to indicate that LILAC doesn't have an exact match, but the absolute value
@@ -212,8 +212,8 @@ def isotope_symbol(atomic_number: int, mass_number: float) -> str:
 		return str(mass_number) + ATOMIC_SYMBOLS[atomic_number]
 
 
-def parse_isotope_symbol(symbol: str) -> tuple[int, float]:
-	""" take a succinct description of an isotope and deduce its atomic number and mass number.
+def parse_isotope_symbol(symbol: str) -> Tuple[int, float]:
+	""" take a succinct description of an isotope and deduce its atomic number and mass number
 	    :param symbol: the succinct descriptor.  typically this will be the mass number (expressed with normal numerals
 	                   or superscript numerals) followed by the elemental symbol, but it may also be "D" or "T" for
 	                   deuterium or tritium.  if the mass number is omitted or is simply the word "natural" (as in
@@ -239,7 +239,7 @@ def parse_isotope_symbol(symbol: str) -> tuple[int, float]:
 		return atomic_number, mass_number
 
 
-def expand_compound_materials(components: dict[str, float]) -> dict[str, float]:
+def expand_compound_materials(components: Dict[str, float]) -> Dict[str, float]:
 	""" take a dictionary denoting the molecular fractions of different materials in a mix, find any that are names of
 	    gasses rather than actual nuclides, and expand those so that you have just the nuclides instead.  modify it in
 	    place, but also return it
@@ -263,7 +263,7 @@ def expand_compound_materials(components: dict[str, float]) -> dict[str, float]:
 	return components
 
 
-def find_best_D3He_material_code(f3He: float) -> tuple[int, float]:
+def find_best_D3He_material_code(f3He: float) -> Tuple[int, float]:
 	""" find the LILAC material code that represents the mixture of D and ³He that most accurately
 	    represents the specified fill ratio.  specifically, find the LILAC material with the nearest
 	    atomic ³He fraction.

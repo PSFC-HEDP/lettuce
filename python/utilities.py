@@ -1,15 +1,14 @@
-from typing import Union
+from typing import Union, Sequence, Dict, Tuple
 
 import numpy as np
 from numpy import arange, interp, exp, sqrt, isfinite, inf, cumsum, where, concatenate, \
 	linspace, unique, \
-	zeros, empty, floor, histogram, float64
-from numpy.typing import NDArray
+	zeros, empty, floor, histogram, float64, ndarray
 
 
-def degrade_laser_pulse(original_pulse: NDArray[float], factor: float) -> NDArray[float]:
+def degrade_laser_pulse(original_pulse: ndarray, factor: float) -> ndarray:
 	""" take a laser pulse and reduce its energy by the given factor by setting stuff at the end to zero. """
-	time = arange(original_pulse.size)
+	time = arange(len(original_pulse))
 	energy_integral = cumsum(original_pulse)/np.sum(original_pulse)
 	cutoff_index = interp(1 - factor, energy_integral, time)
 	return where(time <= cutoff_index, original_pulse, 0)
@@ -33,7 +32,7 @@ def from_superscript(string: str) -> str:
 	return "".join(normalscript.get(character, character) for character in string)
 
 
-def drop_zeros(counts: dict[str, Union[int, float]]) -> dict[str, Union[int, float]]:
+def drop_zeros(counts: Dict[str, Union[int, float]]) -> Dict[str, Union[int, float]]:
 	""" copy a dictionary with all zero elements removed """
 	output = {}
 	for key in counts.keys():
@@ -42,7 +41,7 @@ def drop_zeros(counts: dict[str, Union[int, float]]) -> dict[str, Union[int, flo
 	return output
 
 
-def gradient(y: NDArray[float], x: NDArray[float], **kwargs):
+def gradient(y: np.ndarray, x: np.ndarray, **kwargs):
 	""" it's numpy.gradient but it fixes the roundoff errors you get with inequal steps """
 	# find indices where there is exactly zero change
 	flat = (y[0:-2] == y[1:-1]) & (y[1:-1] == y[2:])
@@ -52,7 +51,7 @@ def gradient(y: NDArray[float], x: NDArray[float], **kwargs):
 	return np.where(~flat, np.gradient(y, x, **kwargs), 0)
 
 
-def width(x: NDArray[float], y: NDArray[float]):
+def width(x: np.ndarray, y: ndarray):
 	""" calculate the full-width at half-max of a curve.
 	    this function isn't very fast, but that's okay.
 	    :return: the FWHM if calculable.  if the peak goes off the end or there is no peak, return inf.
@@ -81,7 +80,7 @@ def width(x: NDArray[float], y: NDArray[float]):
 		return x_rite - x_left
 
 
-def select_key_indices(weights: NDArray[float], num_regions: int) -> tuple[NDArray[int], NDArray[int]]:
+def select_key_indices(weights: ndarray, num_regions: int) -> Tuple[ndarray, ndarray]:
 	""" given some 1D data representing a distribution, select a set of n indices for n points in that
 	    distribution that characterize it well.  specifically, divide it into n regions of roughly equal
 	    integral, then find the indices of the bin that contains the median of each region.
@@ -117,7 +116,7 @@ def select_key_indices(weights: NDArray[float], num_regions: int) -> tuple[NDArr
 	return divisions, centers
 
 
-def rebin(values: NDArray[float], bin_indices: NDArray[int], weights: NDArray[float], axis=0) -> NDArray[float]:
+def rebin(values: ndarray, bin_indices: Sequence[int], weights: ndarray, axis=0) -> ndarray:
 	""" reduce the size of an array by averaging its values within certain index bins
 	    :param values: the original values to be averaged with each other
 	    :param bin_indices: the index at each bin edge. a value `values[i]` belongs to the bin `j` iff i ∈ [bin_indices[j], bin_indices[j + 1]).
@@ -131,7 +130,7 @@ def rebin(values: NDArray[float], bin_indices: NDArray[int], weights: NDArray[fl
 		raise ValueError(f"the right edge of the last bin must be the size of values ({values.size}), not {bin_indices[-1]}")
 	elif axis != 0 or values.ndim != 2:
 		raise NotImplementedError("I haven't generalized this, sorry.")
-	new_values = empty((bin_indices.size - 1,) + values.shape[1:])
+	new_values = empty((len(bin_indices) - 1,) + values.shape[1:])
 	for i in range(values.shape[1]):
 		# use double precision because histogram is super sensitive to roundoff for some reason
 		totals, _ = histogram(arange(values.shape[axis]), bins=bin_indices, weights=(weights*values)[:, i].astype(float64))
@@ -140,9 +139,9 @@ def rebin(values: NDArray[float], bin_indices: NDArray[int], weights: NDArray[fl
 	return new_values
 
 
-def apparent_brightness(electron_number_density: NDArray[float],
-                        electron_temperature: NDArray[float], energy_cutoff: float
-                        ) -> NDArray[float]:
+def apparent_brightness(electron_number_density: ndarray,
+                        electron_temperature: ndarray, energy_cutoff: float
+                        ) -> ndarray:
 	""" how much of the emission would be detected by an image plate
 		:param electron_number_density: the spacio-temporally resolved electron number density (cm^-3)
 		:param electron_temperature: the spacio-temporally resolved electron temperature (keV)
