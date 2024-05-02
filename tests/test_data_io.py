@@ -56,7 +56,7 @@ def test_load_pulse_shape():
 
 
 def test_parse_gas_components():
-	assert parse_gas_components("40atm Au +.3 235U") == {"Au": 40, "²³⁵U": .3}
+	assert parse_gas_components("40atm Au +.3 235U") == {"natural Au": 40, "²³⁵U": .3}
 	assert parse_gas_components("40atm air") == {"air": 40}
 	with pytest.raises(ValueError):
 		parse_gas_components("10atm D + 10atm 2.014H")

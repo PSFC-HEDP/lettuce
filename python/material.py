@@ -181,39 +181,48 @@ LILAC_D3He_MIXTURES = {
 }
 
 
-def nuclide_symbol(atomic_number: int, mass_number: int) -> str:
-	""" succinctly describe this particular nuclide (p, d, ³He, and so on) """
+def nuclide_symbol(atomic_number: int, mass_number: float) -> str:
+	""" succinctly describe this particular nuclide (p, d, ³He, and so on).
+	    note that this function as written fails to make a distinction between protium and natural
+	    hydrogen. it's partially intentional; I hope to god I never need to think about that.
+	"""
 	if atomic_number == -1:
 		return "e"
-	elif atomic_number == 1 and mass_number == 1:
+	elif atomic_number == 1 and round(mass_number) == 1:
 		return "p"
-	elif atomic_number == 1 and mass_number == 2:
+	elif atomic_number == 1 and round(mass_number) == 2:
 		return "d"
-	elif atomic_number == 1 and mass_number == 3:
+	elif atomic_number == 1 and round(mass_number) == 3:
 		return "t"
 	else:
-		return to_superscript(str(mass_number)) + ATOMIC_SYMBOLS[atomic_number]
+		return to_superscript(str(round(mass_number))) + ATOMIC_SYMBOLS[atomic_number]
 
 
 def isotope_symbol(atomic_number: int, mass_number: float) -> str:
 	""" succinctly describe this particular isotope (¹H, D, ³He, and so on) """
-	if atomic_number == 1 and mass_number == 2:
+	if atomic_number == 1 and round(mass_number) == 2:
 		return "D"
-	elif atomic_number == 1 and mass_number == 3:
+	elif atomic_number == 1 and round(mass_number) == 3:
 		return "T"
 	elif mass_number == ATOMIC_MASSES[atomic_number]:
-		return ATOMIC_SYMBOLS[atomic_number]
+		return f"natural {ATOMIC_SYMBOLS[atomic_number]}"
 	elif mass_number == int(mass_number):
-		return to_superscript(str(int(mass_number))) + ATOMIC_SYMBOLS[atomic_number]
+		return to_superscript(str(round(mass_number))) + ATOMIC_SYMBOLS[atomic_number]
 	else:
 		return str(mass_number) + ATOMIC_SYMBOLS[atomic_number]
 
 
 def parse_isotope_symbol(symbol: str) -> tuple[int, float]:
-	""" take a succinct description of an isotope and deduce its atomic number and mass number
+	""" take a succinct description of an isotope and deduce its atomic number and mass number.
+	    :param symbol: the succinct descriptor.  typically this will be the mass number (expressed with normal numerals
+	                   or superscript numerals) followed by the elemental symbol, but it may also be "D" or "T" for
+	                   deuterium or tritium.  if the mass number is omitted or is simply the word "natural" (as in
+	                   "natural C"), it will be set to that element's natural average atomic mass.
 	    :return: the atomic number followed by the atomic weight in Da
 	"""
-	if symbol == "D":
+	if symbol.startswith("natural "):
+		return parse_isotope_symbol(symbol[8:])
+	elif symbol == "D":
 		return 1, 2.014
 	elif symbol == "T":
 		return 1, 3.016
