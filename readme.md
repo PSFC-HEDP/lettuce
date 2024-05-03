@@ -52,6 +52,10 @@ python3 -m pip install -r requirements.txt
 It will probably say something about user installation because normal site-packages is not writeable.
 That's fine.
 
+Occasionally LLE will have installed incompatible versions of two packages on a single module.
+When that happens, you can either take it up with Jonathan Carrol-Nellenback or start throwing around some `--upgrade`s and hope it helps.
+In my case, I had to `pip install --upgrade h5py` to make it play nice with NumPy.
+
 If you're running locally you only need to do the twoth line.
 ~~~bash
 pip install -r requirements.txt
