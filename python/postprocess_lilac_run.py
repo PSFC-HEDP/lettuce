@@ -135,7 +135,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 			elif particle == "t":
 				knockon_cross_section = .9403e-24*.135  # cm^2 (see C. K. Li and al., Phys. Plasmas 8 (2001) 4902)
 			total_yield_rate[reaction] = total_yield_rate["DT-n"]*knockon_cross_section*species_areal_density*1.1  # particle/ns
-			total_yield[reaction] = integrate.trapezoid(x=time, y=total_yield_rate[reaction])
+			total_yield[reaction] = integrate.trapz(x=time, y=total_yield_rate[reaction])
 
 		main_charged_particle = max(["D3He-p", "DD-n", "ko-d (peak)", "ko-p"], key=lambda particle: total_yield[particle])
 
@@ -357,7 +357,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 	pdf.ln()
 	pdf.set_font("Noto", "", 16)
 	pdf.set_x(15)
-	pdf.write(10, f"Laser energy: {integrate.trapezoid(x=time, y=laser_power):.3f} kJ")
+	pdf.write(10, f"Laser energy: {integrate.trapz(x=time, y=laser_power):.3f} kJ")
 	pdf.ln()
 	pdf.set_x(15)
 	pdf.write(10, f"Convergence ratio: {convergence_ratio:.1f}")

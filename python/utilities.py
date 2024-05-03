@@ -158,3 +158,10 @@ def apparent_brightness(electron_number_density: ndarray,
 	return (electron_number_density**2 *
 	        sqrt(electron_temperature) *
 	        exp(-energy_cutoff/electron_temperature))
+
+
+class RecordNotFoundError(Exception):
+	pass
+
+class InvalidSimulationError(Exception):
+	pass
