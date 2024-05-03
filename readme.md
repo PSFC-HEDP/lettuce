@@ -186,7 +186,7 @@ I have zero time to work on this rite now, but there are a few minor changes I w
 - use Lotus to set up IRIS runs instead of my current thing that doesn't actually work.
 - write an IRIS postprocessing script that makes a PDF with some spectra and images.
 
-## some notes on LILAC and IRIS (or: what the LILAC user guide doesn't want you to know)
+## some notes on LILAC and IRIS (or: one weird trick the LILAC user guide doesn't want you to know)
 
 Do not call LILAC with a command-line argument!  It will break all of the filenames.
 
