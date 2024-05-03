@@ -291,9 +291,11 @@ if __name__ == "__main__":
 	parser.add_argument(
 		"--stopping_mode", type=int, default=1,
 		help="the number of the plasma stopping-power model to use for charged particles "
+		     "(0 = none, 1 = Li-Petrasso-Zylstra, 2 = Maynard-Deutsch)")
 	parser.add_argument(
 		"--force", action="store_true",
 		help="whether to overwrite any previous iterations of this run (if --force is not set and you try to start a "
+		     "run that already exists, it will ask you if you're sure)")
 	args = parser.parse_args(sys.argv[2:])  # TODO: add arguments to override flux limiter, density, and laser degradation
 
 	try:
