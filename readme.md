@@ -44,9 +44,9 @@ Not so with Lettuce!
 
 The only dependencies are on PyPI.
 If you're running on Bluehive, you should make sure you have all of the dependencies installed on the relevant module.
-Right now I'm working on `anaconda3/2023.07-2`, so that would look like this:
+Right now I'm working on `anaconda3/2020.11b`, so that would look like this:
 ~~~bash
-module load anaconda3/2023.07-2
+module load anaconda3/2020.11b
 python3 -m pip install -r requirements.txt
 ~~~
 It will probably say something about user installation because normal site-packages is not writeable.
