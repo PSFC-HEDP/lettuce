@@ -50,9 +50,18 @@ def start_run(code: str, name: str, stopping_power_mode: int, force: bool) -> No
 			current_status = outputs_table.loc[name, "status"]
 		# if it's already running and the user didn't force it, stop work immediately
 		if current_status in ["running", "completed", "pending"] and not force:
-			print(f"this run seems to already be {current_status}.  to overwrite it, use the --force "
-			      f"command line option.")
-			return
+			answer = input(
+				f"This run seems to already be {current_status}.  Would you like to overwrite it (use the --force "
+				f"command line option to ignore this warning)?  [y/N]"
+			).lower()
+			if answer == "" or answer == "n" or answer == "no":
+				print("Mm-hmm, I thought not.")
+				return
+			elif answer == "y" or answer == "yes":
+				print("you got it, boss.")
+			else:
+				print(f"I'm not sure what '{answer}' is supposed to mean so I'm going to assume that's a 'no'.")
+				return
 		# if it's already running and the user did force it, cancel the run
 		elif current_status == "pending" or current_status == "running":
 			print(f"cancelling the current run...")
@@ -394,10 +403,10 @@ if __name__ == "__main__":
 		help="the name of the run, as specified in run_inputs.csv")
 	parser.add_argument(
 		"--stopping_mode", type=int, default=1,
-		help="the number of the plasma stopping-power model to use for charged particles (0 = none, 1 = Li-Petrasso-Zylstra, 2 = Maynard-Deutsch)",)
+		help="the number of the plasma stopping-power model to use for charged particles "
 	parser.add_argument(
 		"--force", action="store_true",
-		help="whether to overwrite any previous iterations of this run")
+		help="whether to overwrite any previous iterations of this run (if --force is not set and you try to start a "
 	args = parser.parse_args(sys.argv[2:])  # TODO: add arguments to override flux limiter, density, and laser degradation
 
 	start_run(code, args.name, args.stopping_mode, args.force)
