@@ -20,7 +20,7 @@ echo "IRIS run '<<name>>' starts."
 echo "$(date +'%m-%d %H:%M') | IRIS run '<<name>>' starts." >> "<<root>>/runs.log"
 
 # run IRIS
-timeout 9h iris
+timeout 9h iris iris_data_input.txt
 exit_code=$?
 
 # figure out if the run was successful

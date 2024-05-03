@@ -12,9 +12,9 @@ from pandas import Series, Timestamp, notnull
 
 from data_io import load_pulse_shape, parse_gas_components, load_beam_profile, load_inputs_table, \
 	load_outputs_table, log_message, fill_in_template, write_row_to_outputs_table
-from material import Material, get_solid_material_from_name, get_gas_material_from_components, isotope_symbol, \
+from material import Material, get_solid_material_from_name, get_gas_material_from_components, \
 	parse_isotope_symbol
-from utilities import InvalidSimulationError, RecordNotFoundError, degrade_laser_pulse, gradient, select_key_indices, rebin
+from utilities import InvalidSimulationError, RecordNotFoundError, degrade_laser_pulse
 
 
 def start_run(code: str, name: str, stopping_power_mode: int, force: bool) -> None:
@@ -253,10 +253,11 @@ def prepare_iris_inputs(name: str, stopping_power_mode: int) -> str:
 	"""
 	import lotus
 
-	lilac_directory = f"runs/{name}/lilac/"
+	lilac_directory = f"runs/{name}/lilac"
 	iris_directory = f"runs/{name}/iris-model{stopping_power_mode}" # TODO: I don't really need to separate the lilac and iris directories like this.
 	current_working_directory = os.getcwd().replace('\\', '/')
 
+	# use Lotus to generate the input deck and profile HDF5 files
 	try:
 		lilac_solution = lotus.lilac.LilacSolution(hdf5_file_path=f"{lilac_directory}/output.h5")
 	except FileNotFoundError:
@@ -266,8 +267,23 @@ def prepare_iris_inputs(name: str, stopping_power_mode: int) -> str:
 	lotus.postprocessors.iris.IRISInputDeck(
 		shot_number=lilac_solution.shot_number,
 		hydrocode_solution=lilac_solution,
-		output_file=f"{iris_directory}/inputdeck.txt",
+		output_file=f"{current_working_directory}/{iris_directory}/inputdeck.txt",
 	)
+
+	# make some adjustments (these can probably be done with Lotus but I don't have access to the documentation rite now so)
+	with open(f"{iris_directory}/inputdeck.txt", "r") as file:
+		input_deck = file.read()
+	# add the charged particle transport model option
+	input_deck = sub(
+		r"&scatter([^/]*)/",
+		f"&scatter\\1\n\n"
+		f"    ! stopping power model (0 = no stopping, 1 = Li-Petrasso-Zylstra, 2 = Maynard-Deutsch)\n"
+		f"    charged_particle_transport_model = {stopping_power_mode}\n"
+		f"/",
+		input_deck
+	)
+	with open(f"{iris_directory}/inputdeck.txt", "w") as file:
+		file.write(input_deck)
 
 	bash_script = fill_in_template(
 		"iris_run.sh", {
