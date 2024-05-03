@@ -7,17 +7,14 @@ from re import search, sub, split
 from subprocess import run
 from typing import List
 
-import h5py
 import numpy as np
-from numpy import pi, zeros, append, sort, newaxis, digitize, stack, histogram, identity, diff, arange, \
-	empty, maximum, minimum, cumsum, float64, average
 from pandas import Series, Timestamp, notnull
 
 from data_io import load_pulse_shape, parse_gas_components, load_beam_profile, load_inputs_table, \
 	load_outputs_table, log_message, fill_in_template, write_row_to_outputs_table
 from material import Material, get_solid_material_from_name, get_gas_material_from_components, isotope_symbol, \
 	parse_isotope_symbol
-from utilities import degrade_laser_pulse, gradient, select_key_indices, rebin
+from utilities import InvalidSimulationError, RecordNotFoundError, degrade_laser_pulse, gradient, select_key_indices, rebin
 
 
 def start_run(code: str, name: str, stopping_power_mode: int, force: bool) -> None:
@@ -26,6 +23,8 @@ def start_run(code: str, name: str, stopping_power_mode: int, force: bool) -> No
 	    :param name: a string that will let us look up this run's inputs in the run_inputs.csv table
 	    :param stopping_power_mode: one of 0 for no stopping, 1 for Li-Petrasso-Zylstra, or 2 for Maynard-Deutsch
 	    :param force: whether to run this even if another version of this run already exists TODO: let the user hit "y" so they don't have to redo the command
+		:raise RecordNotFoundError: if it can't find the relevant simulation inputs to build the input deck
+		:raise InvalidSimulationError: if for whatever reason the relevant simulation inputs won't work
 	"""
 	if name.endswith("*"):
 		found_any_matches = False
@@ -35,7 +34,7 @@ def start_run(code: str, name: str, stopping_power_mode: int, force: bool) -> No
 				start_run(code, full_name, stopping_power_mode, force)
 				found_any_matches = True
 		if not found_any_matches:
-			raise ValueError(f"no rows in the run_inputs.csv table match '{name}'")
+			raise KeyError(f"no rows in the run_inputs.csv table match '{name}'")
 		else:
 			return
 
@@ -94,7 +93,7 @@ def start_run(code: str, name: str, stopping_power_mode: int, force: bool) -> No
 def prepare_lilac_inputs(name: str) -> str:
 	""" load the LILAC input parameters from run_inputs.csv and save the pulse shape, beam profile,
 	    and input deck to the relevant directory.
-	    :raises KeyError: if it can't find the relevant information in the input table
+	    :raise RecordNotFoundError: if it can't find the relevant information in the input table
 	"""
 	directory = f"runs/{name}/{code.lower()}"
 	# get the run inputs from the run input table
@@ -102,9 +101,9 @@ def prepare_lilac_inputs(name: str) -> str:
 	try:
 		inputs = inputs_table.loc[name]
 	except KeyError:
-		raise KeyError(f"please add shot '{name}' to the run_inputs.csv file.")
+		raise RecordNotFoundError(f"please add shot '{name}' to the run_inputs.csv file.")
 	if inputs.ndim != 1:
-		raise KeyError(f"run '{name}' appears more than once in the run_inputs.csv file!")
+		raise RecordNotFoundError(f"run '{name}' appears more than once in the run_inputs.csv file!")
 
 	# save all of the inputs and the script to the run directory
 	os.makedirs(directory, exist_ok=True)
@@ -240,138 +239,26 @@ def build_lilac_bash_script(name: str) -> str:
 
 def prepare_iris_inputs(name: str, stopping_power_mode: int) -> str:
 	""" load the relevant LILAC outputs and save them and a matching input deck to the relevant directory.
+	    :raise RecordNotFoundError: if the LILAC input can't be found
+		:raise InvalidSimulationError: if the shot has no DT reactions
 	"""
-	# load information from the LILAC output file
-	with h5py.File(f"runs/{name}/lilac/output.h5") as file:
-		num_layers = file["target/material_name"].size
-		material_codes = file["target/material_codes"][:, 0]
-		material_names = file["target/material_name"][:]
-		mean_atomic_masses = file["target/atomic_weight"][:]
-		mean_atomic_numbers = average(file["target/component_nuclear_charge"][:, :],
-		                              weights=file["target/component_abundance"], axis=1)
+	import lotus
 
-		# converting the component info to these fractions is a bit tricky
-		nuclide_fractions = {nuclide: zeros(num_layers) for nuclide in ["H", "D", "T", "³He", "¹²C"]}
-		for i in range(num_layers):
-			for j in range(file["target/component_abundance"].shape[1]):
-				nuclide = isotope_symbol(round(file["target/component_nuclear_charge"][i, j]),
-				                         round(file["target/component_atomic_weight"][i, j]))
-				if nuclide in nuclide_fractions:
-					nuclide_fractions[nuclide][i] += file["target/component_abundance"][i, j]
-
-		# the trickiest thing here is that we need to coarsen the spacio-temporal stuff
-		burn_rate = gradient(file["time/total_dd_neutrons"][:] + file["time/total_dt_neutrons"][:],
-		                     file["time/absolute_time"][:])
-		time_bin_indices, key_time_indices = select_key_indices(burn_rate, 21)
-		num_fine_times = burn_rate.size
-		num_times = key_time_indices.size
-		zone_height = diff(file["node/boundary_position"][:, :], axis=0)
-		zone_mass = file["zone/mass_density"][:, 0]*zone_height[:, 0]
-		key_node_indices, _ = select_key_indices(zone_mass, 50)
-		# make sure layers don't get mixed together at the coarsened zone boundaries
-		for i in range(num_layers):
-			layer_boundary = file["target/last_zone"][i] - 1
-			if layer_boundary not in key_node_indices:
-				key_node_indices = append(key_node_indices, layer_boundary)
-		key_node_indices = sort(key_node_indices)  # make sure it stays sorted
-		num_fine_zones = zone_mass.shape[0]
-		num_zones = key_node_indices.size - 1
-		layer_index = digitize(key_node_indices[:-1], file["target/last_zone"][:] - 1)
-
-		# then rebin the quantities to the new lower resolution
-		time = file["time/absolute_time"][key_time_indices]
-		node_position = file["node/boundary_position"][:, key_time_indices][key_node_indices, :]
-		node_velocity = file["node/velocity"][:, key_time_indices][key_node_indices, :]
-		zone_velocity = (node_velocity[0:-1] + node_velocity[1:])/2  # convert node velocity to zone velocity
-		mass_density = rebin(file["zone/mass_density"][:, key_time_indices], key_node_indices,
-		                     axis=0, weights=zone_height[:, key_time_indices])
-		ion_temperature = rebin(file["zone/ion_temperature"][:, key_time_indices], key_node_indices,
-		                        axis=0, weights=zone_height[:, key_time_indices])
-		electron_temperature = rebin(file["zone/electron_temperature"][:, key_time_indices], key_node_indices,
-		                             axis=0, weights=zone_height[:, key_time_indices])
-		average_ionization = rebin(file["zone/average_z"][:, key_time_indices], key_node_indices,
-		                           axis=0, weights=zone_height[:, key_time_indices])
-		average_ionization2 = rebin(file["zone/average_z2"][:, key_time_indices], key_node_indices,
-		                            axis=0, weights=zone_height[:, key_time_indices])
-		material_fraction = identity(num_layers)[:, layer_index]  # this should be a sort of identity matrix
-		# reactions in particular are tricky
-		reactions = {}
-		for key, cumulative_reactions in [("DT", file["zone/cumulative_dtn_yield"][:, :]), ("DD", file["zone/cumulative_ddn_yield"][:, :])]:
-			# first convert to actual cumulative reactions at each time because I find the indexing easier that way
-			cumulative_reactions = cumsum(cumulative_reactions.astype(float64), axis=1)
-			# reduce the cumulative reactions to the key time bins
-			cumulative_reactions = (
-				cumulative_reactions[:, maximum(time_bin_indices - 1, 0)] +
-				cumulative_reactions[:, minimum(time_bin_indices, num_fine_times - 1)])/2
-			# differentiate in time to get the number of reactions in each section
-			reactions_per_zone = diff(cumulative_reactions, axis=1)
-			# then rebin in space to the new coarser space bins
-			reactions_per_bin = empty((num_zones, num_times))
-			for j in range(num_times):
-				reactions_per_bin[:, j] = histogram(
-					arange(num_fine_zones), weights=reactions_per_zone[:, j], bins=key_node_indices)[0]
-			reactions[key] = reactions_per_bin
-
-	# save everything to the new directory
-	directory = f"runs/{name}/iris-model{stopping_power_mode}"
-	os.makedirs(f"{directory}/profiles", exist_ok=True)
-
-	# write all of the new HDF5 input files
-	keV = 1e3*1.602e-19
-	for j in range(num_times):  # the filenames index from 1 because Fortran does
-		with h5py.File(f"{directory}/profiles/time{j + 1}.h5", "w") as file:
-			file["title"] = name
-			file["n_r_cells"] = num_zones
-			file["n_theta_cells"] = 1  # one theta cell because LILAC is 1D
-			file["n_phi_cells"] = 1  # one phi cell because LILAC is 1D
-			file["n_materials"] = num_layers
-			file["time"] = time[j]  # ns
-			file["material_names"] = material_names
-			file["r"] = node_position[newaxis, newaxis, :, j]*1e-6  # m
-			file["t"] = [0, pi]  # rad
-			file["p"] = [0, 2*pi]  # rad
-			file["mass_density"] = mass_density[newaxis, newaxis, :, j]/1e-3  # kg/m^3
-			file["ion_temperature"] = ion_temperature[newaxis, newaxis, :, j]*keV  # J
-			file["electron_temperature"] = electron_temperature[newaxis, newaxis, :, j]*keV  # J
-			file["z_effective"] = (average_ionization2/average_ionization)[newaxis, newaxis, :, j]
-			file["r_velocity"] = zone_velocity[newaxis, newaxis, :, j]*1e-2  # m/s
-			file["t_velocity"] = zeros((1, 1, num_zones))
-			file["p_velocity"] = zeros((1, 1, num_zones))
-			file["material_fraction"] = material_fraction[:, newaxis, newaxis, :]
-			file["reactions"] = stack([reactions["DT"][newaxis, newaxis, :, j],
-			                           reactions["DD"][newaxis, newaxis, :, j],
-			                           zeros((1, 1, num_zones))], axis=0)
-
-	# compose the input deck and bash script
+	lilac_directory = f"runs/{name}/lilac/"
+	iris_directory = f"runs/{name}/iris-model{stopping_power_mode}" # TODO: I don't really need to separate the lilac and iris directories like this.
 	current_working_directory = os.getcwd().replace('\\', '/')
-	input_deck = fill_in_template(
-		"iris_input_deck.txt", {
-			"submitted": datetime.today().isoformat(" "),
-			"sanitized name": sub(r"[/\\{}<> ~#%&*?]", "-", name),
-			"number of times": time.size,
-			"fill material code": material_codes[0],
-			"fill hydrogen fraction": nuclide_fractions['H'][0],
-			"fill deuterium fraction": nuclide_fractions['D'][0],
-			"fill tritium fraction": nuclide_fractions['T'][0],
-			"fill helium3 fraction": nuclide_fractions['³He'][0],
-			"fill carbon fraction": nuclide_fractions['¹²C'][0],
-			"fill mean atomic mass": mean_atomic_masses[0]*1.66054e-27,  # kg
-			"fill max ionization": mean_atomic_numbers[0],
-			"shell material code": material_codes[1],
-			"shell hydrogen fraction": nuclide_fractions['H'][1],
-			"shell deuterium fraction": nuclide_fractions['D'][1],
-			"shell tritium fraction": nuclide_fractions['T'][1],
-			"shell helium3 fraction": nuclide_fractions['³He'][1],
-			"shell carbon fraction": nuclide_fractions['¹²C'][1],
-			"shell mean atomic mass": mean_atomic_masses[1]*1.66054e-27,  # kg
-			"shell max ionization": mean_atomic_numbers[1],
-			"stopping power model": stopping_power_mode,
-			"directory": f"{current_working_directory}/{directory}",
-		},
-		loops = {"j": [str(j + 1) for j in range(num_times)]},  # index from 1 because IRIS does
+
+	try:
+		lilac_solution = lotus.lilac.LilacSolution(hdf5_file_path=f"{lilac_directory}/output.h5")
+	except FileNotFoundError:
+		raise RecordNotFoundError(f"There does not appear to be any LILAC output in {lilac_directory}")
+	if np.all(lilac_solution.burn.reaction_rate("D(T,n)He4") == 0):
+		raise InvalidSimulationError(f"This simulation has no DT reactions.  IRIS only works on DT shots.")
+	lotus.postprocessors.iris.IRISInputDeck(
+		shot_number=lilac_solution.shot_number,
+		hydrocode_solution=lilac_solution,
+		output_file=f"{iris_directory}/inputdeck.txt",
 	)
-	with open(f"{directory}/inputdeck.txt", "w") as file:
-		file.write(input_deck)
 
 	bash_script = fill_in_template(
 		"iris_run.sh", {
@@ -379,9 +266,9 @@ def prepare_iris_inputs(name: str, stopping_power_mode: int) -> str:
 			"root": current_working_directory,
 			"folder": f"iris-model{stopping_power_mode}"
 		})
-	with open(f"{directory}/run.sh", "w") as file:
+	with open(f"{iris_directory}/run.sh", "w") as file:
 		file.write(bash_script),
-	return f"{directory}/run.sh"
+	return f"{iris_directory}/run.sh"
 
 
 if __name__ == "__main__":
@@ -400,5 +287,10 @@ if __name__ == "__main__":
 		help="whether to overwrite any previous iterations of this run")
 	args = parser.parse_args(sys.argv[2:])  # TODO: add arguments to override flux limiter, density, and laser degradation
 
-	start_run(code, args.name, args.stopping_mode, args.force)
-	sys.exit(0)
+	try:
+		start_run(code, args.name, args.stopping_mode, args.force)
+	except (RecordNotFoundError, InvalidSimulationError) as e:
+		print("Error!", e)
+		sys.exit(1)
+	else:
+		sys.exit(0)
