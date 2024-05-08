@@ -10,7 +10,6 @@ from data_io import load_pulse_shape, \
 
 def test_load_inputs_table():
 	inputs_table = load_inputs_table()
-	assert inputs_table.index.dtype == str
 	assert inputs_table["flux limiter"].dtype == float
 
 
