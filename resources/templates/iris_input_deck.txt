@@ -76,7 +76,7 @@
     input_filenames(<<j:d>>) = '<<directory:d>>/profiles/time<<j:d>>.h5'
 <<endloop j>>
 
-    output_filename = 'output'
+    output_filename = 'iris'
 /
 
 ! VIRTUAL DETECTOR SETTINGS

@@ -2,14 +2,12 @@ import os.path
 import sys
 from argparse import ArgumentParser
 from collections import defaultdict
-from datetime import datetime
 from os import path
 from typing import Sequence
 
 import h5py
 import numpy as np
 from astropy.units import meter, centimeter, second, kilogram, joule, coulomb, farad, kiloelectronvolt
-from fpdf import FPDF
 from matplotlib import pyplot as plt, colors
 from numpy import stack, tile, cumsum, float64, nonzero, pi, average, exp, log, argmin, argmax, zeros
 from pandas import Timestamp
@@ -17,19 +15,19 @@ from scipy import integrate
 
 from data_io import write_row_to_outputs_table
 from material import isotope_symbol, nuclide_symbol
-from utilities import apparent_brightness, width, gradient
+from utilities import apparent_brightness, width, gradient, create_pdf
 
 plt.rcParams["font.size"] = 11
 
 
-def postprocess_lilac_run(name: str, status: str) -> None:
+def postprocess_lilac_run(name: str, lilac_status: str) -> None:
 	""" read the raw results of a successful LILAC simulation and compile them into a human-readable
 	    PDF.  also save some key numbers like yield and burn-average ρR to run_outputs.csv.
 	"""
 	# start by updating the run_outputs table
 	write_row_to_outputs_table({
 		"name": name,
-		"status": status,
+		"status": lilac_status + " LILAC",
 		"status changed": Timestamp.now(),
 	})
 
@@ -318,18 +316,7 @@ def postprocess_lilac_run(name: str, status: str) -> None:
 
 	# create the summary PDF!
 	print("generating PDF...")
-	pdf = FPDF("landscape", "mm", "A4")
-	pdf.add_font("Noto", "", "resources/fonts/NotoSans-Light.ttf", uni=True)
-	pdf.add_font("Noto", "B", "resources/fonts/NotoSans-Bold.ttf", uni=True)
-	pdf.add_page()
-	pdf.set_font("Noto", "B", 20)
-	pdf.set_title(f"{name} LILAC summary")
-	pdf.write(15, f"{name} LILAC summary")
-	# put the date in the upper corner
-	pdf.set_font("Noto", "", 12)
-	pdf.set_x(-55)
-	pdf.write(15, datetime.today().strftime("%Y %b %d %H:%M:%S"))
-	pdf.ln()
+	pdf = create_pdf(f"{name} LILAC summary")
 	# list the layers
 	pdf.set_font("Noto", "B", 16)
 	pdf.write(10, f"Capsule composition (outer diameter {2*interface_position[-1, 0]:.1f} μm)")

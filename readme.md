@@ -166,7 +166,8 @@ The columns are as follows:
 - **slurm ID**  
   The ID number assigned by Slurm to the most recent job that was submitted related to this.
 - **status**  
-  The state of the Slurm job; one of "pending", "running", "completed", "failed", or "timed out".
+  The state of the most recent Slurm job, followed by either "LILAC" or "IRIS" depending on what that job was.
+  States are one of "pending", "running", "completed", "failed", or "timed out".
 - **status changed**  
   The date and time at which the status of the Slurm job last changed.
 - **yield**  
@@ -182,13 +183,13 @@ The columns are as follows:
 
 ## To do
 
-I have zero time to work on this rite now, but there are a few minor changes I want to make that will greatly improve this library before I hand LILAC off.  and some major changes.
+I have zero time to work on this rite now, but there are a few changes and enhancements I want to make that will greatly improve this library before I hand LILAC off.  and some major changes.
 - allow multiple runs be started simultaneusly by simply separating their names with commas.
-- instead of quitting when the user tries to overwrite a run without having set `--force`, ask them `[Y/n]`-style whether they want to overwrite it.
 - have options like `--flux_limiter=.07` to automaticly generate a new set of run_inputs based on an existing row in run_inputs.csv but with one parameter tweaked and an appropriate tag appended to the name with a slash.
-- make the output PDFs portait instead of landscape
-- use Lotus to set up IRIS runs instead of my current thing that doesn't actually work.
+- make the output PDFs portait instead of landscape, or use two columns.
 - write an IRIS postprocessing script that makes a PDF with some spectra and images.
+- change the status recorded in run_outputs.csv from "pending" to "running" when it gets off the queue (right now it goes straight from "pending" to "completed" when it finishes, which is misleading.)
+- find a way to change the status recorded in run_outputs.csv to "cancelled" when it gets cancelled (it's rough because none of my code gets called when that happens).
 
 ## some notes on LILAC and IRIS (or: one weird trick the LILAC user guide doesn't want you to know)
 
@@ -238,4 +239,32 @@ maybe I need to stop using the FPOT table and use a different one instead?
 
 The IRIS documentation doesn't state what units the inputs must be in.
 In reality they're all SI (velocity in m/s, density in kg/m³, and cetera).
-Note that temperature is in J, not K or keV.
+Note that temperature must be in J, not K or keV.
+
+IRIS generates a HDF5 file with two main datasets that give all of the imaging and spectral information.
+The dataset `/images/image` contains all of the images.
+Each value is the space- and energy-resolved intensity at a given point at a given time measured by a given detector, measured in particles/MeV/m^2/sr.
+The values are arranged in 6 dimensions as follows:
+- dimension 0 indexes the different times of the implosion (given in nanoseconds in `/time`);
+- dimension 1 indexes the different reaction products (0: primary fusion neutrons, 1: proton-scattered neutrons, 2: deuteron-scattered neutrons, 3: triton-scattered neutrons, 4: carbon-scatterd neutrons, 5: neutrons from deuteron breakup, 6: knock-on deuterons, 7: knock-on tritons);
+- dimension 2 indexes the different detection energy bins (the bin edges are given in MeV in `/images/energy`);
+- dimension 3 indexes the different detectors (the position of each is given in radians in `/images/theta` and `/images/phi`);
+- dimension 4 indexes the different x bins (the edges are evenly spaced and centered on x = 0; the absolute value of the outermost bin edges is given in meters in `/images/size`);
+- dimension 5 indexes the different y bins (the edges are evenly spaced and centered on y = 0; the absolute value of the outermost bin edges is given in meters in `/images/size`).
+
+The dataset `/spectra/dNdE` contains all of the spectra.
+Each value is the energy-resolved fluence of a given particle species at a given time measured by a given detector, in unknown units.
+The values are arranged in 6 dimensions as follows:
+- dimension 0 indexes the different times of the implosion (see above);
+- dimension 1 indexes the different fusion reactions (0 is DT, 1 is DD, I don't remember what 2 is);
+- dimension 2 indexes particles by the number of scattering events;
+- dimension 3 indexes the different types of reaction product (see above);
+- dimension 4 indexes the different energy bins (the bin edges are given in joules in `/spectra/energy`);
+- dimension 5 indexes the different detectors (the position and size of each is given in `/spectra/theta`, `/spectra/phi`, `/spectra/min_solid_angle`, and `/spectra/max_solid_angle`).
+
+In addition to spectra, IRIS also returns the average ρL seen by each detector as the dataset `/spectra/rhoL`.
+Each value is the average line-integrated density experienced by particles collected by a given detector, at a given time.
+The values are arranged in 3 dimensions as follows:
+- dimension 0 indexes the different times of the implosion (see above);
+- dimension 1, based on its length, must either index by fusion reaction or by number of scattering events, but since the output file isn't annotated it's impossible to tell;
+- dimension 2 indexes the different detectors (see above).

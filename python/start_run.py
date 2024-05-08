@@ -42,15 +42,22 @@ def start_run(code: str, name: str, stopping_power_mode: int, force: bool) -> No
 		# assess the current state of this run TODO: the outputs table needs to distinguish the LILAC state from the IRIS state, and warn you if you try to do IRIS without LILAC first
 		outputs_table = load_outputs_table()
 		if name not in outputs_table.index:
-			current_status = "new"
+			current_lilac_status = "new"
 		elif not os.path.isdir(f"runs/{name}/lilac"):
-			current_status = "new"
+			current_lilac_status = "new"
 		else:
-			current_status = outputs_table.loc[name, "status"]
+			current_status: str = outputs_table.loc[name, "status"]
+			if current_status.endswith(" LILAC"):
+				current_lilac_status = current_status.split()[0]
+			elif current_status.endswith(" IRIS"):
+				current_lilac_status = "completed"
+			else:
+				raise ValueError(f"I don't think '{current_status}' is a valid status.")
+
 		# if it's already running and the user didn't force it, stop work immediately
-		if current_status in ["running", "completed", "pending"] and not force:
+		if current_lilac_status in ["running", "completed", "pending"] and not force:
 			answer = input(
-				f"This run seems to already be {current_status}.  Would you like to overwrite it (use the --force "
+				f"This run seems to already be {current_lilac_status}.  Would you like to overwrite it (use the --force "
 				f"command line option to ignore this warning)?  [y/N]"
 			).lower()
 			if answer == "" or answer == "n" or answer == "no":
@@ -62,14 +69,14 @@ def start_run(code: str, name: str, stopping_power_mode: int, force: bool) -> No
 				print(f"I'm not sure what '{answer}' is supposed to mean so I'm going to assume that's a 'no'.")
 				return
 		# if it's already running and the user did force it, cancel the run
-		elif current_status == "pending" or current_status == "running":
+		elif current_lilac_status == "pending" or current_lilac_status == "running":
 			print(f"cancelling the current run...")
 			try:
 				run(["scancel", outputs_table.loc[name, "slurm ID"]])
 			except FileNotFoundError:
 				raise FileNotFoundError("I can't call scancel. are you sure slurm is installed and loaded?")
 		# if it's already run and the user did force it, clear the previous output
-		elif current_status == "completed":
+		elif current_lilac_status == "completed":
 			print(f"overwriting the previous run...")
 			shutil.rmtree(f"runs/{name}/lilac")
 
@@ -92,7 +99,7 @@ def start_run(code: str, name: str, stopping_power_mode: int, force: bool) -> No
 	# update our records
 	write_row_to_outputs_table({
 		"name": name,
-		"status": "pending",
+		"status": f"pending {code}",
 		"status changed": Timestamp.now(),
 		"slurm ID": slurm_ID,
 	})

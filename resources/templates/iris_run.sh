@@ -16,6 +16,9 @@ module load iris/2021.09.03/b1
 # move to the directory where runs happen
 cd "<<root>>/runs/<<name>>/<<folder>>" || exit 1
 
+# create the output folder that IRIS will want to use
+mkdir output --parents
+
 echo "IRIS run '<<name>>' starts."
 echo "$(date +'%m-%d %H:%M') | IRIS run '<<name>>' starts." >> "<<root>>/runs.log"
 
@@ -44,15 +47,15 @@ echo "$(date +'%m-%d %H:%M') | ${exit_string}" >> "<<root>>/runs.log"
 
 # Move the file out of the "output" directory
 if [ -f output/iris.hdf5 ]; then
-	mv output/output.hdf5 output.h5
+	mv output/iris.hdf5 output.h5
 fi
 if [ -d output ]; then
 	rm --recursive --force output
 fi
 
-# TODO: call the postprocessing script to generate the summary PDF
+# call the postprocessing script to generate the summary PDF
 cd "<<root>>" || exit 1
 module load anaconda3/2023.07-2
-echo "python3 python/postprocess_iris_run <<name>> --status=${result}"
+python3 python/postprocess_iris_run "<<name>>" --status=${result}
 
 exit ${exit_code}

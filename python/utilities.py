@@ -1,6 +1,8 @@
+from datetime import datetime
 from typing import Union, Sequence, Dict, Tuple
 
 import numpy as np
+from fpdf import FPDF
 from numpy import arange, interp, exp, sqrt, isfinite, inf, cumsum, where, concatenate, \
 	linspace, unique, \
 	zeros, empty, floor, histogram, float64, ndarray
@@ -158,6 +160,24 @@ def apparent_brightness(electron_number_density: ndarray,
 	return (electron_number_density**2 *
 	        sqrt(electron_temperature) *
 	        exp(-energy_cutoff/electron_temperature))
+
+
+def create_pdf(title: str) -> FPDF:
+	""" start an FPDF object a nicely formatted header """
+	pdf = FPDF("landscape", "mm", "A4")
+	pdf.add_font("Noto", "", "resources/fonts/NotoSans-Light.ttf", uni=True)
+	pdf.add_font("Noto", "B", "resources/fonts/NotoSans-Bold.ttf", uni=True)
+	pdf.add_page()
+	pdf.set_font("Noto", "B", 20)
+	pdf.set_title(title)
+	pdf.write(15, title)
+	# put the date in the upper corner
+	pdf.set_font("Noto", "", 12)
+	pdf.set_x(-55)
+	pdf.write(15, datetime.today().strftime("%Y %b %d %H:%M:%S"))
+	pdf.ln()
+	return pdf
+
 
 
 class RecordNotFoundError(Exception):
