@@ -62,11 +62,14 @@ def postprocess_iris_run(name: str, iris_status: str) -> None:
 	fig = plt.figure(figsize=(140*mm, 130*mm), facecolor="none")
 	ax = fig.add_subplot()
 	ax.grid()
-	plot_histogram(ax, energy_bins/1.60e-13, DD_n_spectrum + DT_n_spectrum, alpha=1.0, label="Neutrons")
+	plot_histogram(ax, energy_bins/1.60e-13, DD_n_spectrum + DT_n_spectrum,
+	               alpha=.8, zorder=2, label="Neutrons")
 	if np.sum(ko_d_spectrum) > 0:
-		plot_histogram(ax, energy_bins/1.60e-13, ko_d_spectrum, alpha=.7, label="Deuterons")
+		plot_histogram(ax, energy_bins/1.60e-13, ko_d_spectrum,
+		               alpha=.8, zorder=2, label="Deuterons")
 	if np.sum(ko_t_spectrum) > 0:
-		plot_histogram(ax, energy_bins/1.60e-13, ko_t_spectrum, alpha=.7, label="Tritons")
+		plot_histogram(ax, energy_bins/1.60e-13, ko_t_spectrum,
+		               alpha=.8, zorder=2, label="Tritons")
 	ax.set_xlabel("Energy (MeV)")
 	ax.set_xlim(0, 16)
 	ax.set_yscale("log")
