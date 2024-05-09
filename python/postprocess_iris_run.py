@@ -93,7 +93,7 @@ def postprocess_iris_run(name: str, iris_status: str) -> None:
 	pdf.write(10, f"DT-neutron: {np.sum(DT_n_spectrum*diff(energy_bins)):.4g} ")
 	pdf.ln()
 	pdf.set_x(15)
-	pdf.write(10, f"DD-neutron: {np.sum(DT_n_spectrum*diff(energy_bins)):.4g}")
+	pdf.write(10, f"DD-neutron: {np.sum(DD_n_spectrum*diff(energy_bins)):.4g}")
 	pdf.ln()
 	pdf.set_x(15)
 	pdf.write(10, f"ko-deuteron: {np.sum(ko_d_spectrum*diff(energy_bins)):.4g}")
