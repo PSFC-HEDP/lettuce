@@ -56,6 +56,6 @@ fi
 # call the postprocessing script to generate the summary PDF
 cd "<<root>>" || exit 1
 module load anaconda3/2023.07-2
-python3 python/postprocess_iris_run "<<name>>" --status=${result}
+python3 python/postprocess_iris_run.py "<<name>>" --status=${result}
 
 exit ${exit_code}
