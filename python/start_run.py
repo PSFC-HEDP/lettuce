@@ -57,8 +57,8 @@ def start_run(code: str, name: str, stopping_power_mode: int, force: bool) -> No
 		# if it's already running and the user didn't force it, stop work immediately
 		if current_lilac_status in ["running", "completed", "pending"] and not force:
 			answer = input(
-				f"This run seems to already be {current_lilac_status}.  Would you like to overwrite it (use the --force "
-				f"command line option to ignore this warning)?  [y/N]"
+				f"This run seems to already be {current_lilac_status} (use `--force` to ignore this warning).  "
+				f"Would you like to overwrite it?  [y/N] "
 			).lower()
 			if answer == "" or answer == "n" or answer == "no":
 				print("Mm-hmm, I thought not.")
