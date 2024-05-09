@@ -11,7 +11,7 @@ Unlike Lettuce, tho, Lotus is a Python *package*.
 So it helps you write your own Python scripts, but you still have to write the scripts yourself.
 Not so with Lettuce!
 
-## File structure
+## Repository contents
 
 - `runs/`  
   All of the simulation inputs and outputs, organized into subfolders by shot and code
@@ -121,6 +121,16 @@ On Windows PowerShell the command is
 ~~~powershell
 $env:pythonpath="python\"; python -m pytest
 ~~~
+
+### Directly editing input decks
+
+In the case of both LILAC and IRIS, you should ideally be able to specify all of the options you need from the command line or using `run_inputs.csv`.
+However, LILAC and IRIS are far more featureful than my code, and thus you may occasionally need to edit the input decks directly.
+All you'll need to do is go into the relevant subdirectory of `runs/`,
+find `lilac_input_deck.txt` in the case of LILAC or `inputdeck.txt` in the case of IRIS,
+make the desired change,
+and then call `sbatch run.sh`.
+That script contains all of the slurm options, the updates to `runs.log` and `run_outputs.csv`, and the postprocessing step.
 
 ## Run inputs
 
