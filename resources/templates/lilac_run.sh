@@ -27,7 +27,7 @@ if [ $exit_code -eq 0 ]; then
 	if grep -q "run summary" "lilac_$SLURM_JOB_ID.log"; then
 		exit_code=0
 		result="completed"
-		exit_string="LILAC run '<<name>>' exits successfully."
+		exit_string="LILAC run '<<name>>' completes successfully."
 	elif grep -q "negative temperature detected" "lilac_$SLURM_JOB_ID.log"; then
 		exit_code=4
 		result="failed"
