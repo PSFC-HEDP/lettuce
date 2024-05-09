@@ -37,9 +37,6 @@ def postprocess_iris_run(name: str, iris_status: str) -> None:
 	print("loading IRIS output...")
 	with h5py.File(f"{directory}/output.h5") as solution:
 		image = solution["images/image"][:, 0:6, :, 0, :, :].sum(axis=(0, 1, 2))  # take a single imager, and sum all the neutron images over time, and energy
-		print(solution["images/image"][:, :6, :, 0, :, :].shape, np.sum(solution["images/image"][:, :6, :, 0, :, :]))
-		print(solution["images/image"][:, 6:7, :, 0, :, :].shape, np.sum(solution["images/image"][:, 6:7, :, 0, :, :]))
-		print(solution["images/image"][:, 7:, :, 0, :, :].shape, np.sum(solution["images/image"][:, 7:, :, 0, :, :]))
 		spacial_range = solution["images/size"][0]/1e-6  # and take the size of the image in μm
 		DT_n_spectrum = solution["spectra/dNdE"][:, 0, :, 0:6, :, 0].sum(axis=(0, 1, 2))  # take a single spectrometer, and sum all neutron types over all time
 		DD_n_spectrum = solution["spectra/dNdE"][:, 1, :, 0:6, :, 0].sum(axis=(0, 1, 2))  # take a single spectrometer, and sum all neutron types over all time
