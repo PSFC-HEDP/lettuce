@@ -117,16 +117,15 @@ This will print out all of the IRIS that is currently queued or running.
 Once the IRIS job finishes, it will automatically post-process the result
 and generate a PDF containing spectra and images in its run directory.
 
-### Unit tests
+### Reading outputs
 
-If you want to run unit tests, mind the PythonPath.  On Unix the command is
-~~~bash
-PYTHONPATH=python/ python -m pytest
-~~~
-On Windows PowerShell the command is
-~~~powershell
-$env:pythonpath="python\"; python -m pytest
-~~~
+Since `./check_on_runs.sh` only tells you about current or recent runs,
+it's important to know where to go for information about a run after it's over.
+In addition to the aforementioned PDF summaries in each run subdirectory,
+there are two top-level files that provide key information about all past runs in one place.
+The `run_outputs.csv` table provides a handful of LILAC-calculated scalars like yield and bang-time for every run you've ever completed.
+Rerunning a LILAC simulation will overwrite the corresponding row, so the values listed are always the most up-to-date versions.
+The `runs.log` file, on the other hand, is simply a record of the time at which every run starts, finishes, or fails.
 
 ### Directly editing input decks
 
@@ -137,6 +136,17 @@ find `lilac_input_deck.txt` in the case of LILAC or `inputdeck.txt` in the case 
 make the desired change,
 and then call `sbatch lilac.sh` or `sbatch iris.sh` appropriately.
 That script contains all of the slurm options, the updates to `runs.log` and `run_outputs.csv`, and the postprocessing step.
+
+### Unit tests
+
+If you want to run unit tests, mind the PythonPath.  On Unix the command is
+~~~bash
+PYTHONPATH=python/ python -m pytest
+~~~
+On Windows PowerShell the command is
+~~~powershell
+$env:pythonpath="python\"; python -m pytest
+~~~
 
 ## Run inputs
 
