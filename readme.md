@@ -76,9 +76,9 @@ See [§ Run inputs](#run-inputs) for more information.
 
 To start the run, call
 ~~~bash
-./start_lilac_run.sh [NAME]
+./start_lilac_run.sh {NAME}
 ~~~
-The `[NAME]` should be the same as what's in the "name" column of `run_inputs.csv`.
+The `{NAME}` should be the same as what's in the "name" column of `run_inputs.csv`.
 It can also end in an asterisk to run all pattern-matched names in the table.
 This currently only works for a single asterisk at the end of the name.
 It will warn you if the simulation appears to be exactly the same as one that has already been run.
@@ -99,8 +99,14 @@ After LILAC is done, you can run IRIS.
 Eventually it would be nice if it automatically ran IRIS after LILAC, but for now it's manual.
 To start an IRIS run, call
 ~~~bash
-./start_iris_run.sh [NAME]
+./start_iris_run.sh {NAME} [--stopping_model={MODEL}]
 ~~~
+As with LILAC, the `{NAME}` can end with an asterisk to pattern-match from the `run_inputs.csv` table.
+The stopping power `{MODEL}` determines how charged particles lose energy while transiting dense plasma,
+and can be one of the following (if it's omitted, it will default to 1):
+- **0** – No charged particle plasma stopping.
+- **1** –  Li–Petrasso–Zylstra, as given in *Phys. Plasmas 26*, art. 122703 (2019), DOI: 10.1063/1.5114637.
+- **2** – Maynard–Deutsch, as given in *Matter Radiat. Extremes 1*, p. 277 (2016), DOI: 10.1016/j.mre.2016.11.004.
 
 While you're waiting, you can see how your runs are doing with
 ~~~bash
@@ -129,7 +135,7 @@ However, LILAC and IRIS are far more featureful than my code, and thus you may o
 All you'll need to do is go into the relevant subdirectory of `runs/`,
 find `lilac_input_deck.txt` in the case of LILAC or `inputdeck.txt` in the case of IRIS,
 make the desired change,
-and then call `sbatch run.sh`.
+and then call `sbatch lilac.sh` or `sbatch iris.sh` appropriately.
 That script contains all of the slurm options, the updates to `runs.log` and `run_outputs.csv`, and the postprocessing step.
 
 ## Run inputs
@@ -168,7 +174,7 @@ The columns are as follows:
 
 ## Key run outputs
 
-The run outputs are described in detail in the `output.pdf` file of each run directory.
+The run outputs are described in detail in the `lilac_summary.pdf` and file of each run directory.
 For a conglomerated summary, tho, one can look at `run_outputs.csv`.
 The columns are as follows:
 - **name**  
@@ -201,7 +207,7 @@ I have zero time to work on this rite now, but there are a few changes and enhan
 - change the status recorded in run_outputs.csv from "pending" to "running" when it gets off the queue (right now it goes straight from "pending" to "completed" when it finishes, which is misleading.)
 - find a way to change the status recorded in run_outputs.csv to "cancelled" when it gets cancelled (it's rough because none of my code gets called when that happens).
 
-## some notes on LILAC and IRIS (or: one weird trick the LILAC user guide doesn't want you to know)
+## some notes on LILAC and IRIS (or: ten weird tricks the LILAC user guide doesn't want you to know)
 
 Do not call LILAC with a command-line argument!  It will break all of the filenames.
 

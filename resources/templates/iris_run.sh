@@ -5,7 +5,7 @@
 #SBATCH --ntasks=16
 #SBATCH --mem-per-cpu=4GB
 #SBATCH --qos=b-standard
-#SBATCH --output=<<root>>/runs/<<name>>/<<folder>>/iris_%A.log
+#SBATCH --output=<<root>>/runs/<<name>>/iris_%A.log
 #SBATCH --mail-type=END
 
 # Load IRIS and clean up the environment
@@ -14,7 +14,7 @@ module load hdf5/1.12.0/b3
 module load iris/2021.09.03/b1
 
 # move to the directory where runs happen
-cd "<<root>>/runs/<<name>>/<<folder>>" || exit 1
+cd "<<root>>/runs/<<name>>" || exit 1
 
 # create the output folder that IRIS will want to use
 mkdir output --parents
@@ -45,9 +45,9 @@ fi
 echo "${exit_string}"
 echo "$(date +'%m-%d %H:%M') | ${exit_string}" >> "<<root>>/runs.log"
 
-# Move the file out of the "output" directory
+# Move the file out of the "output" directory and give it a more descriptive filename
 if [ -f output/iris.hdf5 ]; then
-	mv output/iris.hdf5 output.h5
+	mv output/iris.hdf5 "iris_output_<<basename>>.h5"
 fi
 if [ -d output ]; then
 	rm --recursive --force output

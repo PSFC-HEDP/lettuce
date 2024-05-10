@@ -1,11 +1,12 @@
 import os
+from os import path
 import shutil
 import sys
 from argparse import ArgumentParser
 from datetime import datetime
 from re import search, sub, split
 from subprocess import run
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 from pandas import Series, Timestamp, notnull
@@ -17,33 +18,47 @@ from material import Material, get_solid_material_from_name, get_gas_material_fr
 from utilities import InvalidSimulationError, RecordNotFoundError, degrade_laser_pulse
 
 
-def start_run(code: str, name: str, stopping_power_mode: int, force: bool) -> None:
+def start_run(code: str, name: str, stopping_power_option: Optional[int], force: bool) -> None:
 	""" arrange the inputs for a LILAC or IRIS run in a machine-readable format and submit it to slurm
 	    :param code: one of "LILAC" or "IRIS"
 	    :param name: a string that will let us look up this run's inputs in the run_inputs.csv table
-	    :param stopping_power_mode: one of 0 for no stopping, 1 for Li-Petrasso-Zylstra, or 2 for Maynard-Deutsch
+	    :param stopping_power_option: one of 0 for no stopping, 1 for Li-Petrasso-Zylstra, or 2 for Maynard-Deutsch.
+	                                  if none is specified, it will use 1 but won't specify that in the filenames.
 	    :param force: whether to run this even if another version of this run already exists TODO: let the user hit "y" so they don't have to redo the command
-		:raise RecordNotFoundError: if it can't find the relevant simulation inputs to build the input deck
-		:raise InvalidSimulationError: if for whatever reason the relevant simulation inputs won't work
+	    :raise RecordNotFoundError: if it can't find the relevant simulation inputs to build the input deck
+	    :raise InvalidSimulationError: if for whatever reason the relevant simulation inputs won't work
 	"""
+	# expand any star expressions in the name
 	if name.endswith("*"):
 		found_any_matches = False
 		for full_name in load_inputs_table().index:
 			if full_name[:len(name) - 1] == name[:-1]:
 				print(f"starting {code} run for {full_name}...")
-				start_run(code, full_name, stopping_power_mode, force)
+				start_run(code, full_name, stopping_power_option, force)
 				found_any_matches = True
 		if not found_any_matches:
-			raise KeyError(f"no rows in the run_inputs.csv table match '{name}'")
+			raise RecordNotFoundError(f"no rows in the run_inputs.csv table match '{name}'")
 		else:
 			return
 
+	# augment the name if necessary to incorporate any command-line options
+	# TODO: add command-line options for things like flux limiter and pulse degradation
+	lilac_name = name
+	if stopping_power_option is not None:
+		if code == "LILAC":
+			raise InvalidSimulationError("you can't set the stopping power model for LILAC; that's an IRIS option.")
+		stopping_power_model_number = stopping_power_option
+		name = lilac_name + f"/model{stopping_power_model_number:d}"
+	else:
+		stopping_power_model_number = 1
+		name = lilac_name
+
 	if code == "LILAC":
-		# assess the current state of this run TODO: the outputs table needs to distinguish the LILAC state from the IRIS state, and warn you if you try to do IRIS without LILAC first
+		# assess the current state of this run
 		outputs_table = load_outputs_table()
 		if name not in outputs_table.index:
 			current_lilac_status = "new"
-		elif not os.path.isdir(f"runs/{name}/lilac"):
+		elif not path.isdir(f"runs/{name}"):
 			current_lilac_status = "new"
 		else:
 			current_status: str = outputs_table.loc[name, "status"]
@@ -55,7 +70,7 @@ def start_run(code: str, name: str, stopping_power_mode: int, force: bool) -> No
 				raise ValueError(f"I don't think '{current_status}' is a valid status.")
 
 		# if it's already running and the user didn't force it, stop work immediately
-		if current_lilac_status in ["running", "completed", "pending"] and not force:
+		if current_lilac_status in ["running", "completed", "pending"] and not force: # TODO: it seems like IRIS could also benefit from this part of the code
 			answer = input(
 				f"This run seems to already be {current_lilac_status} (use `--force` to ignore this warning).  "
 				f"Would you like to overwrite it?  [y/N] "
@@ -78,12 +93,12 @@ def start_run(code: str, name: str, stopping_power_mode: int, force: bool) -> No
 		# if it's already run and the user did force it, clear the previous output
 		elif current_lilac_status == "completed":
 			print(f"overwriting the previous run...")
-			shutil.rmtree(f"runs/{name}/lilac")
+			shutil.rmtree(f"runs/{name}")
 
 	if code == "LILAC":
 		script_path = prepare_lilac_inputs(name)
 	elif code == "IRIS":
-		script_path = prepare_iris_inputs(name, stopping_power_mode)
+		script_path = prepare_iris_inputs(lilac_name, name, stopping_power_model_number)
 	else:
 		print(f"unrecognized code: '{code}'")
 		return
@@ -111,7 +126,6 @@ def prepare_lilac_inputs(name: str) -> str:
 	    and input deck to the relevant directory.
 	    :raise RecordNotFoundError: if it can't find the relevant information in the input table
 	"""
-	directory = f"runs/{name}/{code.lower()}"
 	# get the run inputs from the run input table
 	inputs_table = load_inputs_table()
 	try:
@@ -122,17 +136,17 @@ def prepare_lilac_inputs(name: str) -> str:
 		raise RecordNotFoundError(f"run '{name}' appears more than once in the run_inputs.csv file!")
 
 	# save all of the inputs and the script to the run directory
-	os.makedirs(directory, exist_ok=True)
+	os.makedirs(f"runs/{name}", exist_ok=True)
 
 	# load the laser data
 	pulse_time, pulse_power = load_pulse_shape(inputs["pulse shape"], inputs["laser energy"])
 	if notnull(inputs["laser degradation"]):
 		pulse_power = degrade_laser_pulse(pulse_power, inputs["laser degradation"])
-	np.savetxt(f"{directory}/pulse_shape.txt",
+	np.savetxt(f"runs/{name}/pulse_shape.txt",
 	           np.stack([pulse_time, pulse_power], axis=1), delimiter=",")  # type: ignore
 
 	beam_radius, beam_intensity = load_beam_profile(inputs["beam profile"])
-	np.savetxt(f"{directory}/beam_profile.txt",
+	np.savetxt(f"runs/{name}/beam_profile.txt",
 	           np.stack([beam_radius, beam_intensity], axis=1),  # type: ignore
 	           delimiter=" ", fmt="%.6f")  # type: ignore
 
@@ -146,15 +160,15 @@ def prepare_lilac_inputs(name: str) -> str:
 	# compose the input deck
 	input_deck = build_lilac_input_deck(name, inputs, pulse_end_time, fill_material,
 	                                    shell_layer_materials, shell_layer_thicknesses)
-	with open(f"{directory}/lilac_data_input.txt", "w") as file:
+	with open(f"runs/{name}/lilac_data_input.txt", "w") as file:
 		file.write(input_deck)
 
 	# compose the bash script
 	bash_script = build_lilac_bash_script(name)
-	with open(f"{directory}/run.sh", "w") as file:
+	with open(f"runs/{name}/lilac.sh", "w") as file:
 		file.write(bash_script)
 
-	return f"{directory}/run.sh"
+	return f"runs/{name}/lilac.sh"
 
 
 def build_lilac_input_deck(
@@ -249,58 +263,61 @@ def build_lilac_bash_script(name: str) -> str:
 	return fill_in_template(
 		"lilac_run.sh", {
 			"name": name,
+			"basename": path.basename(name),
 			"root": os.getcwd().replace('\\', '/'),
 		})
 
 
-def prepare_iris_inputs(name: str, stopping_power_mode: int) -> str:
+def prepare_iris_inputs(lilac_name: str, iris_name: str, stopping_power_model_number: int) -> str:
 	""" load the relevant LILAC outputs and save them and a matching input deck to the relevant directory.
+	    :param lilac_name: the name of the LILAC run off of which we're basing this
+	    :param iris_name: the name of the IRIS run to set up
+	    :param stopping_power_model_number: one of 0 for no stopping, 1 for Li-Petrasso-Zylstra, or 2 for Maynard-Deutsch.
+	    :return: the filepath of the prepared bash script
 	    :raise RecordNotFoundError: if the LILAC input can't be found
-		:raise InvalidSimulationError: if the shot has no DT reactions
+	    :raise InvalidSimulationError: if the shot has no DT reactions
 	"""
 	import lotus
 
-	lilac_directory = f"runs/{name}/lilac"
-	iris_directory = f"runs/{name}/iris-model{stopping_power_mode}" # TODO: I don't really need to separate the lilac and iris directories like this.
 	current_working_directory = os.getcwd().replace('\\', '/')
 
 	# use Lotus to generate the input deck and profile HDF5 files
 	try:
-		lilac_solution = lotus.lilac.LilacSolution(hdf5_file_path=f"{lilac_directory}/output.h5")
+		lilac_solution = lotus.lilac.LilacSolution(hdf5_file_path=f"runs/{lilac_name}/lilac_output_{path.basename(lilac_name)}.h5")
 	except FileNotFoundError:
-		raise RecordNotFoundError(f"There does not appear to be any LILAC output in {lilac_directory}")
+		raise RecordNotFoundError(f"There does not appear to be any LILAC output in runs/{iris_name}")
 	if np.all(lilac_solution.burn.reaction_rate("D(T,n)He4") == 0):
 		raise InvalidSimulationError(f"This simulation has no DT reactions.  IRIS only works on DT shots.")
 	lotus.postprocessors.iris.IRISInputDeck(
 		shot_number=lilac_solution.shot_number,
 		hydrocode_solution=lilac_solution,
-		output_file=f"{current_working_directory}/{iris_directory}/inputdeck.txt",
+		output_file=f"{current_working_directory}/runs/{iris_name}/inputdeck.txt",
 	)
 
 	# make some adjustments (these can probably be done with Lotus but I don't have access to the documentation rite now so)
-	with open(f"{iris_directory}/inputdeck.txt", "r") as file:
+	with open(f"runs/{iris_name}/inputdeck.txt", "r") as file:
 		input_deck = file.read()
 	# add the charged particle transport model option
 	input_deck = sub(
 		r"&scatter([^/]*)/",
 		f"&scatter\\1\n\n"
 		f"    ! stopping power model (0 = no stopping, 1 = Li-Petrasso-Zylstra, 2 = Maynard-Deutsch)\n"
-		f"    charged_particle_transport_model = {stopping_power_mode}\n"
+		f"    charged_particle_transport_model = {stopping_power_model_number:d}\n"
 		f"/",
 		input_deck
 	)
-	with open(f"{iris_directory}/inputdeck.txt", "w") as file:
+	with open(f"runs/{iris_name}/inputdeck.txt", "w") as file:
 		file.write(input_deck)
 
 	bash_script = fill_in_template(
 		"iris_run.sh", {
-			"name": name,
+			"name": iris_name,
+			"basename": path.basename(iris_name),
 			"root": current_working_directory,
-			"folder": f"iris-model{stopping_power_mode}"
 		})
-	with open(f"{iris_directory}/run.sh", "w") as file:
+	with open(f"runs/{iris_name}/iris.sh", "w") as file:
 		file.write(bash_script),
-	return f"{iris_directory}/run.sh"
+	return f"runs/{iris_name}/iris.sh"
 
 
 if __name__ == "__main__":
@@ -312,7 +329,7 @@ if __name__ == "__main__":
 		"name", type=str,
 		help="the name of the run, as specified in run_inputs.csv")
 	parser.add_argument(
-		"--stopping_mode", type=int, default=1,
+		"--stopping_model", type=int, default=None,
 		help="the number of the plasma stopping-power model to use for charged particles "
 		     "(0 = none, 1 = Li-Petrasso-Zylstra, 2 = Maynard-Deutsch)")
 	parser.add_argument(
@@ -322,7 +339,7 @@ if __name__ == "__main__":
 	args = parser.parse_args(sys.argv[2:])  # TODO: add arguments to override flux limiter, density, and laser degradation
 
 	try:
-		start_run(code, args.name, args.stopping_mode, args.force)
+		start_run(code, args.name, args.stopping_model, args.force)
 	except (RecordNotFoundError, InvalidSimulationError) as e:
 		print("Error!", e)
 		sys.exit(1)

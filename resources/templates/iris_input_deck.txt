@@ -1,3 +1,4 @@
+! NOTE: this input deck is not currently used.  but I'm keeping it around for now because I still kind of want to find a way to use it someday.  It's just a lot more readable than Varchas's.
 ! IRIS INPUT DECK
 ! generated using lettuce
 ! <<submitted>>
@@ -73,7 +74,7 @@
 ! HDF5 FILENAMES
 &io
 <<loop j>>
-    input_filenames(<<j:d>>) = '<<directory:d>>/profiles/time<<j:d>>.h5'
+    input_filenames(<<j:d>>) = '<<directory:d>>/input/0_profile_<<times[<<j:d>>]:d>>ps.h5'
 <<endloop j>>
 
     output_filename = 'iris'

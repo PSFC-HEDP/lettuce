@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --mem-per-cpu=4GB
 #SBATCH --qos=b-standard
-#SBATCH --output=<<root>>/runs/<<name>>/lilac/lilac_%A.log
+#SBATCH --output=<<root>>/runs/<<name>>/lilac_%A.log
 #SBATCH --mail-type=END
 
 # Load LILAC and clean up the environment
@@ -13,7 +13,7 @@ module purge
 module load lilac
 
 # move to the directory where runs happen
-cd "<<root>>/runs/<<name>>/lilac" || exit 1
+cd "<<root>>/runs/<<name>>" || exit 1
 
 echo "LILAC run '<<name>>' starts."
 echo "$(date +'%m-%d %H:%M') | LILAC run '<<name>>' starts." >> "<<root>>/runs.log"
@@ -35,7 +35,7 @@ if [ $exit_code -eq 0 ]; then
 	else
 		exit_code=3
 		result="failed"
-		exit_string="LILAC run '<<name>>' quits prematurely (see '<<root>>/runs/<<name>>/lilac/lilac_$SLURM_JOB_ID.log')."
+		exit_string="LILAC run '<<name>>' quits prematurely (see '<<root>>/runs/<<name>>/lilac_$SLURM_JOB_ID.log')."
 	fi
 elif [ $exit_code -eq 124 ]; then
 	result="timeout"
@@ -52,15 +52,15 @@ fi
 echo "${exit_string}"
 echo "$(date +'%m-%d %H:%M') | ${exit_string}" >> "<<root>>/runs.log"
 
-# Move files out of the "out" directory
+# Move files out of the "out" directory and give them more descriptive filenames
 if [ -f out/fort.13 ]; then
-	mv "out/fort.13" "output.lpf"
+	mv "out/fort.13" "lilac_output_<<basename>>.lpf"
 fi
 if [ -f out/lilac.hdf5 ]; then
-	mv "out/lilac.hdf5" "output.h5"
+	mv "out/lilac.hdf5" "lilac_output_<<basename>>.h5"
 fi
 if [ -f out/lilac_output.txt ]; then
-	mv "out/lilac_output.txt" "output.txt"
+	mv "out/lilac_output.txt" "lilac_output.txt"
 fi
 if [ -d out ]; then
 	rm --recursive --force out

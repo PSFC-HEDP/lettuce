@@ -28,14 +28,14 @@ def postprocess_iris_run(name: str, iris_status: str) -> None:
 	})
 
 	# check if there's any output
-	directory = f"runs/{name}/iris-model1"
-	if not os.path.isfile(f"{directory}/output.h5"):
+	basename = path.basename(name)
+	if not os.path.isfile(f"runs/{name}/iris_output_{basename}.h5"):
 		print("There was no IRIS output to postprocess.")
 		return
 
 	# if there is, get to postprocessing!
 	print("loading IRIS output...")
-	with h5py.File(f"{directory}/output.h5") as solution:
+	with h5py.File(f"runs/{name}/iris_output_{basename}.h5") as solution:
 		image = solution["images/image"][:, 0:6, :, 0, :, :].sum(axis=(0, 1, 2))  # take a single imager, and sum all the neutron images over time, and energy
 		spacial_range = solution["images/size"][0]/1e-6  # and take the size of the image in μm
 		DT_n_spectrum = solution["spectra/dNdE"][:, 0, :, 0:6, :, 0].sum(axis=(0, 1, 2))  # take a single spectrometer, and sum all neutron types over all time
@@ -55,8 +55,8 @@ def postprocess_iris_run(name: str, iris_status: str) -> None:
 	ax.set_xlabel(f"x (μm)")
 	ax.set_ylabel(f"y (μm)")
 	fig.tight_layout()
-	fig.savefig(f"{directory}/image_plot.eps")
-	fig.savefig(f"{directory}/image_plot.png", dpi=150)
+	fig.savefig(f"runs/{name}/plot_image.eps")
+	fig.savefig(f"runs/{name}/plot_image.png", dpi=150)
 
 	# plot the neutron, deuteron, and triton spectra
 	fig = plt.figure(figsize=(140*mm, 130*mm), facecolor="none")
@@ -77,15 +77,15 @@ def postprocess_iris_run(name: str, iris_status: str) -> None:
 	ax.set_ylim(peak_magnitude*2e-6, peak_magnitude*2e+0)
 	fig.tight_layout()
 	ax.legend(loc="upper left")
-	fig.savefig(f"{directory}/spectrum_plot.eps")
-	fig.savefig(f"{directory}/spectrum_plot.png", dpi=150)
+	fig.savefig(f"runs/{name}/plot_spectrum.eps")
+	fig.savefig(f"runs/{name}/plot_spectrum.png", dpi=150)
 
 	# create the summary PDF!
 	print("generating PDF...")
 	pdf = create_pdf(f"{name} IRIS summary")
 	# include the plots
-	pdf.image(f"{directory}/image_plot.png", 10, 20, 140, 130)
-	pdf.image(f"{directory}/spectrum_plot.png", 150, 20, 140, 130)
+	pdf.image(f"runs/{name}/plot_image.png", 10, 20, 140, 130)
+	pdf.image(f"runs/{name}/plot_spectrum.png", 150, 20, 140, 130)
 	# print out some yields
 	pdf.set_y(150)
 	pdf.set_font("Noto", "B", 16)
@@ -105,7 +105,7 @@ def postprocess_iris_run(name: str, iris_status: str) -> None:
 	pdf.write(10, f"ko-triton: {np.sum(ko_t_spectrum*diff(energy_bins)):.4g}")
 	pdf.ln()
 	# save it!
-	pdf.output(f"{directory}/summary {path.split(name)[-1]}.pdf")
+	pdf.output(f"runs/{name}/iris_summary_{basename}.pdf")
 
 	print("done!")
 
@@ -121,7 +121,7 @@ if __name__ == "__main__":
 		description = "read the raw results of a successful IRIS simulation and compile them into a human-readable PDF")
 	parser.add_argument(
 		"name", type=str,
-		help="the name of the run, as specified in run_inputs.csv")
+		help="the name of the run, as specified in run_inputs.csv, possibly including additional slash-separated options")
 	parser.add_argument(
 		"--status", type=str, default="completed",
 		help="the end state of the run; one of 'completed', 'failed', or 'timeout'")

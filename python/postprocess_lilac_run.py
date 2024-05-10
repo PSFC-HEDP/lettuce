@@ -32,14 +32,14 @@ def postprocess_lilac_run(name: str, lilac_status: str) -> None:
 	})
 
 	# check if there's any output
-	directory = f"runs/{name}/lilac"
-	if not os.path.isfile(f"{directory}/output.h5"):
+	basename = path.basename(name)
+	if not os.path.isfile(f"runs/{name}/lilac_output_{basename}.h5"):
 		print("There was no LILAC output to postprocess.")
 		return
 
 	# if there is, get to postprocessing!
 	print("loading LILAC output...")
-	with h5py.File(f"{directory}/output.h5") as solution:
+	with h5py.File(f"runs/{name}/lilac_output_{basename}.h5") as solution:
 		print("processing LILAC output...")
 		num_layers = solution["target/material_name"].size
 		num_zones = solution["target/zone/atomic_mass"].size
@@ -231,7 +231,7 @@ def postprocess_lilac_run(name: str, lilac_status: str) -> None:
 		[time] + [total_yield_rate[reaction] for reaction in fusion_reactions],
 		axis=1)
 	np.savetxt(
-		f"{directory}/time_history.csv", table, delimiter=",",  # type: ignore
+		f"runs/{name}/burn_history.csv", table, delimiter=",",  # type: ignore
 		header="Time (ns), DD-n (ns^-1), DT-n (ns^-1), D3He-p (ns^-1)")
 
 	# plot the spacio-temporally resolved ion temperature and shell trajectory
@@ -277,8 +277,8 @@ def postprocess_lilac_run(name: str, lilac_status: str) -> None:
 	ax_top_rite.grid(axis="y")
 	ax_top_rite.legend(curves, labels, framealpha=1, fancybox=False)
 	fig.tight_layout()
-	fig.savefig(f"{directory}/time_plot.eps")
-	fig.savefig(f"{directory}/time_plot.png", dpi=150)
+	fig.savefig(f"runs/{name}/plot_time.eps")
+	fig.savefig(f"runs/{name}/plot_time.png", dpi=150)
 
 	# plot the density and temperature profiles
 	fig, (ax_top, ax_T) = plt.subplots(
@@ -311,8 +311,8 @@ def postprocess_lilac_run(name: str, lilac_status: str) -> None:
 	ax_top.set_ylim(1e-2, 1e+2)
 	ax_top.grid()
 	fig.tight_layout()
-	fig.savefig(f"{directory}/space_plot.eps")
-	fig.savefig(f"{directory}/space_plot.png", dpi=150)
+	fig.savefig(f"runs/{name}/plot_space.eps")
+	fig.savefig(f"runs/{name}/plot_space.png", dpi=150)
 
 	# create the summary PDF!
 	print("generating PDF...")
@@ -335,8 +335,8 @@ def postprocess_lilac_run(name: str, lilac_status: str) -> None:
 		pdf.write(10, layer_description)
 		pdf.ln()
 	# include the plots
-	pdf.image(f"{directory}/time_plot.png", 10, 80, 140, 120)
-	pdf.image(f"{directory}/space_plot.png", 150, 80, 140, 100)
+	pdf.image(f"runs/{name}/plot_time.png", 10, 80, 140, 120)
+	pdf.image(f"runs/{name}/plot_space.png", 150, 80, 140, 100)
 	pdf.add_page()
 	# print out some general numbers
 	pdf.set_font("Noto", "B", 16)
@@ -380,7 +380,7 @@ def postprocess_lilac_run(name: str, lilac_status: str) -> None:
 					pdf.ln()
 			pdf.ln()
 	# save it!
-	pdf.output(f"{directory}/summary {path.split(name)[-1]}.pdf")
+	pdf.output(f"runs/{name}/lilac_summary_{basename}.pdf")
 
 	# update our records
 	print("updating run_outputs.csv...")
