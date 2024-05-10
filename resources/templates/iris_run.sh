@@ -38,7 +38,7 @@ elif [ $exit_code -eq 137 ]; then
 	exit_string="IRIS run '<<name>>' is cancelled."
 else
 	result="failed"
-	exit_string="IRIS run '<<name>>' fails with error_code ${exit_code} (see '<<root>>/runs/<<name>>/<<folder>>/iris_$SLURM_JOB_ID.log')."
+	exit_string="IRIS run '<<name>>' fails with error code ${exit_code} (see '<<root>>/runs/<<name>>/iris_$SLURM_JOB_ID.log')."
 fi
 
 # log the result to the slurm log and to runs.log

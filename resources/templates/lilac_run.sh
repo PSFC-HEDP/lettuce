@@ -45,7 +45,7 @@ elif [ $exit_code -eq 137 ]; then
 	exit_string="LILAC run '<<name>>' is cancelled."
 else
 	result="failed"
-	exit_string="LILAC run '<<name>>' fails with error_code ${exit_code} (see '<<root>>/runs/<<name>>/lilac/lilac_$SLURM_JOB_ID.log')."
+	exit_string="LILAC run '<<name>>' fails with error code ${exit_code} (see '<<root>>/runs/<<name>>/lilac_$SLURM_JOB_ID.log')."
 fi
 
 # log the result to the slurm log and to runs.log
